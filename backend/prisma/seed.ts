@@ -57,7 +57,6 @@ async function main() {
         { title: "Полная загрузка стирки", points: 20, waterValue: 40 },
         { title: "Устранил утечку", points: 30, waterValue: 60 },
         { title: "Установил аэратор", points: 25, waterValue: 35 },
-        { title: "Своя активность", points: 10, waterValue: 5, isCustom: true },
       ],
     },
     {
@@ -70,7 +69,6 @@ async function main() {
         { title: "Многоразовая сумка", points: 15, recycledValue: 1 },
         { title: "Многоразовая бутылка", points: 20, recycledValue: 1 },
         { title: "Сдал пластик", points: 25, recycledValue: 3 },
-        { title: "Своя активность", points: 10, recycledValue: 1, isCustom: true },
       ],
     },
     {
@@ -82,7 +80,6 @@ async function main() {
         { title: "Сортировка", points: 15, recycledValue: 2 },
         { title: "Сдал вторсырье", points: 20, recycledValue: 3 },
         { title: "Компост", points: 20, recycledValue: 2 },
-        { title: "Своя активность", points: 10, recycledValue: 1, isCustom: true },
       ],
     },
     {
@@ -95,7 +92,15 @@ async function main() {
         { title: "Отключил приборы из сети", points: 15, energyValue: 3 },
         { title: "Использую LED-лампы", points: 20, energyValue: 5 },
         { title: "Использую дневной свет", points: 15, energyValue: 3 },
-        { title: "Своя активность", points: 10, energyValue: 1, isCustom: true },
+      ],
+    },
+    {
+      name: "custom",
+      description: "Custom eco activity",
+      color: "purple",
+      icon: "custom",
+      habits: [
+        { title: "Своя активность", points: 10, isCustom: true },
       ],
     },
   ];
@@ -230,6 +235,16 @@ async function main() {
   for (const cat of createdCategories) {
     const categoryConfig = categories.find((item) => item.name === cat.name);
     if (!categoryConfig) continue;
+
+    const allowedHabitTitles = categoryConfig.habits.map((habit) => habit.title);
+
+    await prisma.habit.deleteMany({
+      where: {
+        categoryId: cat.id,
+        creatorId: null,
+        title: { notIn: allowedHabitTitles },
+      },
+    });
 
     for (const habit of categoryConfig.habits) {
       const exists = await prisma.habit.findFirst({
