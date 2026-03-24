@@ -1,6 +1,7 @@
 import base64
 
 from app.models.chat import ChatMessage
+from app.models.challenge import Challenge
 from app.models.challenge import UserChallenge
 from app.models.post import Post, PostMedia
 from app.models.user import Activity, User
@@ -15,12 +16,29 @@ from app.schemas.bootstrap import (
 )
 
 
-def user_level(points: int) -> str:
+def user_level_number(points: int) -> int:
     if points < 120:
-        return "Эко-новичок"
+        return 1
     if points < 320:
+        return 2
+    return 3
+
+
+def user_level(points: int) -> str:
+    level_number = user_level_number(points)
+    if level_number == 1:
+        return "Эко-новичок"
+    if level_number == 2:
         return "Эко-воин"
     return "Хранитель Земли"
+
+
+def unlocked_challenge_count(points: int) -> int:
+    return user_level_number(points) * 5
+
+
+def challenge_sort_key(challenge: Challenge) -> tuple[int, str]:
+    return (challenge.reward_points, challenge.title)
 
 
 def serialize_user(user: User) -> UserProfileResponse:

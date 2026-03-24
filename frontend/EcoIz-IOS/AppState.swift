@@ -11,6 +11,7 @@ final class AppState: ObservableObject {
     @Published var isSendingMessage = false
     @Published var isClaimingChallenge = false
     @Published var alertMessage: String?
+    @Published var levelUpLevel: EcoLevel?
 
     @Published var user = UserProfile(
         fullName: "Пользователь",
@@ -30,7 +31,7 @@ final class AppState: ObservableObject {
     let templatesByCategory: [ActivityCategory: [ActivityTemplate]] = [
         .transport: [
             ActivityTemplate(title: "Пешая прогулка", estimatedCO2: 1.5, points: 20),
-            ActivityTemplate(title: "Мотоцикл", estimatedCO2: 0.2, points: 5),
+            ActivityTemplate(title: "Мотоцикл", estimatedCO2: 0.3, points: 5),
             ActivityTemplate(title: "Велосипед", estimatedCO2: 2.0, points: 25),
             ActivityTemplate(title: "Самокат", estimatedCO2: 0.8, points: 15),
             ActivityTemplate(title: "Машина", estimatedCO2: 0.0, points: 0),
@@ -39,28 +40,28 @@ final class AppState: ObservableObject {
             ActivityTemplate(title: "Совместная поездка", estimatedCO2: 1.3, points: 18)
         ],
         .plastic: [
-            ActivityTemplate(title: "Без пакета", estimatedCO2: 0.0, points: 10),
-            ActivityTemplate(title: "Многоразовая сумка", estimatedCO2: 0.0, points: 15),
-            ActivityTemplate(title: "Многоразовая бутылка", estimatedCO2: 0.0, points: 20),
-            ActivityTemplate(title: "Сдал пластик", estimatedCO2: 0.0, points: 25)
+            ActivityTemplate(title: "Без пакета", estimatedCO2: 0.05, points: 10),
+            ActivityTemplate(title: "Многоразовая сумка", estimatedCO2: 0.08, points: 15),
+            ActivityTemplate(title: "Многоразовая бутылка", estimatedCO2: 0.12, points: 20),
+            ActivityTemplate(title: "Сдал пластик", estimatedCO2: 0.18, points: 25)
         ],
         .water: [
-            ActivityTemplate(title: "Короткий душ", estimatedCO2: 0.0, points: 15),
-            ActivityTemplate(title: "Закрыл кран вовремя", estimatedCO2: 0.0, points: 10),
-            ActivityTemplate(title: "Полная загрузка стирки", estimatedCO2: 0.0, points: 20),
-            ActivityTemplate(title: "Устранил утечку", estimatedCO2: 0.0, points: 30),
-            ActivityTemplate(title: "Установил аэратор", estimatedCO2: 0.0, points: 25)
+            ActivityTemplate(title: "Короткий душ", estimatedCO2: 0.35, points: 15),
+            ActivityTemplate(title: "Закрыл кран вовремя", estimatedCO2: 0.08, points: 10),
+            ActivityTemplate(title: "Полная загрузка стирки", estimatedCO2: 0.25, points: 20),
+            ActivityTemplate(title: "Устранил утечку", estimatedCO2: 0.6, points: 30),
+            ActivityTemplate(title: "Установил аэратор", estimatedCO2: 0.45, points: 25)
         ],
         .waste: [
-            ActivityTemplate(title: "Сортировка", estimatedCO2: 0.0, points: 15),
-            ActivityTemplate(title: "Сдал вторсырье", estimatedCO2: 0.0, points: 20),
-            ActivityTemplate(title: "Компост", estimatedCO2: 0.0, points: 20)
+            ActivityTemplate(title: "Сортировка", estimatedCO2: 0.2, points: 15),
+            ActivityTemplate(title: "Сдал вторсырье", estimatedCO2: 0.3, points: 20),
+            ActivityTemplate(title: "Компост", estimatedCO2: 0.25, points: 20)
         ],
         .energy: [
-            ActivityTemplate(title: "Выключил свет", estimatedCO2: 0.0, points: 10),
-            ActivityTemplate(title: "Отключил приборы из сети", estimatedCO2: 0.0, points: 15),
-            ActivityTemplate(title: "Использую LED-лампы", estimatedCO2: 0.0, points: 20),
-            ActivityTemplate(title: "Использую дневной свет", estimatedCO2: 0.0, points: 15)
+            ActivityTemplate(title: "Выключил свет", estimatedCO2: 0.18, points: 10),
+            ActivityTemplate(title: "Отключил приборы из сети", estimatedCO2: 0.12, points: 15),
+            ActivityTemplate(title: "Использую LED-лампы", estimatedCO2: 0.4, points: 20),
+            ActivityTemplate(title: "Использую дневной свет", estimatedCO2: 0.15, points: 15)
         ]
     ]
 
@@ -163,7 +164,7 @@ final class AppState: ObservableObject {
                 media: media,
                 shareToNews: shareToNews
             )
-            user = response.user
+            updateUser(response.user, animateLevelUp: true)
             challenges = response.challenges
             activities.insert(response.activity, at: 0)
             if shareToNews {
@@ -226,7 +227,7 @@ final class AppState: ObservableObject {
 
         do {
             let response = try await apiClient.claimChallenge(id: challengeID)
-            user = response.user
+            updateUser(response.user, animateLevelUp: true)
             challenges = response.challenges
             return response.challenge
         } catch {
@@ -237,7 +238,7 @@ final class AppState: ObservableObject {
 
     private func loadBootstrap() async throws {
         let bootstrap = try await apiClient.bootstrap()
-        user = bootstrap.user
+        updateUser(bootstrap.user, animateLevelUp: false)
         activities = bootstrap.activities
         challenges = bootstrap.challenges
         posts = bootstrap.posts
@@ -251,6 +252,7 @@ final class AppState: ObservableObject {
 
     private func clearSession() {
         isAuthenticated = false
+        levelUpLevel = nil
         user = UserProfile(
             fullName: "Пользователь",
             email: "user@ecoiz.app",
@@ -268,5 +270,12 @@ final class AppState: ObservableObject {
 
     private func present(_ error: Error) {
         alertMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+    }
+
+    private func updateUser(_ newUser: UserProfile, animateLevelUp: Bool) {
+        let previousLevel = user.level
+        user = newUser
+        guard animateLevelUp, newUser.level.number > previousLevel.number else { return }
+        levelUpLevel = newUser.level
     }
 }

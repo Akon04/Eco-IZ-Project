@@ -23,6 +23,10 @@ from app.schemas.admin import (
     AdminUserResponse,
     CategoryMetricsResponse,
     CommunityPostResponse,
+    CreateAchievementRequest,
+    CreateAdminPostRequest,
+    CreateCategoryRequest,
+    CreateHabitRequest,
     EcoCategoryResponse,
     HabitMetricsResponse,
     HabitResponse,
@@ -55,6 +59,7 @@ from app.services.bootstrap import (
     serialize_user,
     serialize_user_challenge,
 )
+from app.services.seed import assign_challenges_for_user
 
 router = APIRouter()
 
@@ -180,8 +185,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthRes
     db.flush()
 
     base_challenges = db.scalars(select(Challenge)).all()
-    for challenge in base_challenges:
-        db.add(UserChallenge(user_id=user.id, challenge_id=challenge.id, current_count=0, is_completed=False))
+    assign_challenges_for_user(db, user, base_challenges)
     db.add(ChatMessage(user_id=user.id, role="assistant", text="Привет! Я эко-ИИ. Помогу улучшить твои экопривычки и мотивацию."))
     db.commit()
     db.refresh(user)
@@ -273,6 +277,8 @@ def add_activity(
             item.is_completed = True
             item.completed_at = now
             current_user.points += item.challenge.reward_points
+
+    assign_challenges_for_user(db, current_user, db.scalars(select(Challenge)).all())
 
     if payload.shareToNews:
         post = Post(user_id=current_user.id, author_name=current_user.full_name, text=f"Добавил активити: {payload.title} ({payload.category})" + (f"\n{payload.note.strip()}" if payload.note.strip() else ""), created_at=now)
@@ -452,6 +458,39 @@ def update_category(
     return serialize_category(category)
 
 
+@router.post("/admin/categories", response_model=EcoCategoryResponse, status_code=status.HTTP_201_CREATED)
+def create_category(
+    payload: CreateCategoryRequest,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> EcoCategoryResponse:
+    if db.scalar(select(EcoCategory).where(EcoCategory.name == payload.name.strip())):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Category already exists.")
+    category = EcoCategory(
+        name=payload.name.strip(),
+        description=payload.description.strip(),
+        color=payload.color.strip(),
+        icon=payload.icon.strip(),
+    )
+    db.add(category)
+    db.commit()
+    db.refresh(category)
+    return serialize_category(category)
+
+
+@router.delete("/admin/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_category(
+    category_id: str,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    category = db.scalar(select(EcoCategory).where(EcoCategory.id == parse_uuid(category_id)))
+    if not category:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found.")
+    db.delete(category)
+    db.commit()
+
+
 @router.get("/admin/habits", response_model=list[HabitResponse])
 def admin_habits(
     search: str | None = None,
@@ -507,6 +546,46 @@ def update_habit(
     return serialize_habit(db.scalar(select(Habit).options(selectinload(Habit.category)).where(Habit.id == parse_uuid(habit_id))))
 
 
+@router.post("/admin/habits", response_model=HabitResponse, status_code=status.HTTP_201_CREATED)
+def create_habit(
+    payload: CreateHabitRequest,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> HabitResponse:
+    category_name = payload.category.strip()
+    category = db.scalar(select(EcoCategory).where(EcoCategory.name == category_name))
+    if not category:
+        category = EcoCategory(name=category_name, description="", color="#43B244", icon="leaf")
+        db.add(category)
+        db.flush()
+    habit = Habit(
+        title=payload.title.strip(),
+        description=payload.description.strip() or None,
+        points=payload.points,
+        co2_value=payload.co2Value,
+        water_value=payload.waterValue,
+        energy_value=payload.energyValue,
+        category_id=category.id,
+    )
+    db.add(habit)
+    db.commit()
+    db.refresh(habit)
+    return serialize_habit(db.scalar(select(Habit).options(selectinload(Habit.category)).where(Habit.id == habit.id)))
+
+
+@router.delete("/admin/habits/{habit_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_habit(
+    habit_id: str,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    habit = db.scalar(select(Habit).where(Habit.id == parse_uuid(habit_id)))
+    if not habit:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Habit not found.")
+    db.delete(habit)
+    db.commit()
+
+
 @router.get("/admin/achievements", response_model=list[AchievementResponse])
 def admin_achievements(
     search: str | None = None,
@@ -548,6 +627,42 @@ def update_achievement(
     db.commit()
     db.refresh(challenge)
     return serialize_achievement(challenge)
+
+
+@router.post("/admin/achievements", response_model=AchievementResponse, status_code=status.HTTP_201_CREATED)
+def create_achievement(
+    payload: CreateAchievementRequest,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> AchievementResponse:
+    if db.scalar(select(Challenge).where(Challenge.title == payload.title.strip())):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Achievement already exists.")
+    challenge = Challenge(
+        title=payload.title.strip(),
+        description=payload.description.strip(),
+        target_count=payload.targetValue,
+        reward_points=payload.rewardPoints,
+        badge_symbol=payload.icon.strip(),
+        badge_tint_hex=payload.badgeTintHex,
+        badge_background_hex=payload.badgeBackgroundHex,
+    )
+    db.add(challenge)
+    db.commit()
+    db.refresh(challenge)
+    return serialize_achievement(challenge)
+
+
+@router.delete("/admin/achievements/{achievement_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_achievement(
+    achievement_id: str,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    challenge = db.scalar(select(Challenge).where(Challenge.id == parse_uuid(achievement_id)))
+    if not challenge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Achievement not found.")
+    db.delete(challenge)
+    db.commit()
 
 
 @router.get("/admin/posts", response_model=list[CommunityPostResponse])
@@ -596,3 +711,41 @@ def update_admin_post(
     db.commit()
     db.refresh(post)
     return serialize_admin_post(post)
+
+
+@router.post("/admin/posts", response_model=CommunityPostResponse, status_code=status.HTTP_201_CREATED)
+def create_admin_post(
+    payload: CreateAdminPostRequest,
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> CommunityPostResponse:
+    author = payload.author.strip()
+    content = payload.content.strip()
+    if not author or not content:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Author and content are required.")
+    post = Post(
+        user_id=current_admin.id,
+        author_name=author,
+        text=content,
+        visibility=payload.visibility,
+        moderation_state=payload.state,
+        reports_count=payload.reportsCount,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(post)
+    db.commit()
+    db.refresh(post)
+    return serialize_admin_post(post)
+
+
+@router.delete("/admin/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(
+    post_id: str,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    post = db.scalar(select(Post).where(Post.id == parse_uuid(post_id)))
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
+    db.delete(post)
+    db.commit()

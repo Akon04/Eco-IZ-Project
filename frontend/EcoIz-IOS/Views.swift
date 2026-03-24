@@ -419,8 +419,8 @@ struct HomeView: View {
         let energyActions = appState.activities.filter { $0.category == .energy }.count
         return [
             ImpactCardModel(
-                value: "\(Int((appState.user.co2SavedTotal * 3.2).rounded())) кг",
-                title: "Очищено воздуха",
+                value: "\(String(format: "%.1f", appState.user.co2SavedTotal)) кг",
+                title: "Сохранено CO₂",
                 icon: "wind",
                 tint: Color(hex: 0x2F80ED),
                 background: Color(hex: 0xE7F0FF)
@@ -748,6 +748,7 @@ struct ChallengesView: View {
     @EnvironmentObject private var appState: AppState
     @State private var celebratingChallenge: Challenge?
     @State private var isCelebrationVisible = false
+    @State private var selectedChallengeHint: Challenge?
 
     private var visibleChallenges: [Challenge] {
         appState.challenges.filter { !$0.isClaimed }
@@ -839,6 +840,9 @@ struct ChallengesView: View {
                                             challenge: item,
                                             compact: compactLayout,
                                             isClaiming: appState.isClaimingChallenge,
+                                            onOpenHint: {
+                                                selectedChallengeHint = item
+                                            },
                                             onClaim: {
                                                 Task {
                                                     guard let claimed = await appState.claimChallenge(item.id) else { return }
@@ -847,16 +851,6 @@ struct ChallengesView: View {
                                                         withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
                                                             isCelebrationVisible = true
                                                         }
-                                                    }
-                                                    try? await Task.sleep(nanoseconds: 2_000_000_000)
-                                                    await MainActor.run {
-                                                        withAnimation(.easeInOut(duration: 0.25)) {
-                                                            isCelebrationVisible = false
-                                                        }
-                                                    }
-                                                    try? await Task.sleep(nanoseconds: 250_000_000)
-                                                    await MainActor.run {
-                                                        celebratingChallenge = nil
                                                     }
                                                 }
                                             }
@@ -871,12 +865,20 @@ struct ChallengesView: View {
                     }
 
                     if let celebratingChallenge, isCelebrationVisible {
-                        ChallengeClaimCelebrationOverlay(challenge: celebratingChallenge)
+                        ChallengeClaimCelebrationOverlay(challenge: celebratingChallenge) {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                isCelebrationVisible = false
+                            }
+                            celebratingChallenge = nil
+                        }
                             .transition(.asymmetric(insertion: .scale(scale: 0.92).combined(with: .opacity), removal: .opacity))
                     }
                 }
             }
             .navigationBarHidden(true)
+            .sheet(item: $selectedChallengeHint) { challenge in
+                ChallengeHintSheet(challenge: challenge)
+            }
         }
     }
 }
@@ -2109,7 +2111,7 @@ private struct ProfileAchievementMiniCard: View {
                     .lineLimit(2)
                     .minimumScaleFactor(0.82)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 126, maxHeight: 126, alignment: .top)
             .padding(.vertical, 8)
             .padding(.horizontal, 6)
             .background(Color.white.opacity(0.82), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -2296,6 +2298,7 @@ private struct ChallengeAchievementCard: View {
     let challenge: Challenge
     let compact: Bool
     let isClaiming: Bool
+    let onOpenHint: () -> Void
     let onClaim: () -> Void
 
     private var progress: Double {
@@ -2307,40 +2310,48 @@ private struct ChallengeAchievementCard: View {
         let tint = Color(hex: challenge.badgeTintHex)
 
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 12) {
-                AchievementBadgeView(challenge: challenge, size: compact ? 68 : 74)
+            Button(action: onOpenHint) {
+                HStack(alignment: .top, spacing: 12) {
+                    AchievementBadgeView(challenge: challenge, size: compact ? 68 : 74)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(challenge.title)
-                            .font(EcoTypography.title2)
-                            .foregroundStyle(EcoTheme.ink)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.8)
-                        Spacer()
-                        Text("\(min(challenge.currentCount, challenge.targetCount))/\(challenge.targetCount)")
-                            .font(EcoTypography.headline)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule()
-                                .fill(Color.black.opacity(0.08))
-                                .frame(height: 12)
-                            Capsule()
-                                .fill(Color(hex: 0xF7C300))
-                                .frame(width: geo.size.width * progress, height: 12)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(challenge.title)
+                                .font(EcoTypography.title2)
+                                .foregroundStyle(EcoTheme.ink)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.8)
+                            Spacer()
+                            Text("\(min(challenge.currentCount, challenge.targetCount))/\(challenge.targetCount)")
+                                .font(EcoTypography.headline)
+                                .foregroundStyle(.secondary)
                         }
-                    }
-                    .frame(height: 12)
 
-                    Text("- \(challenge.description)")
-                        .font(EcoTypography.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule()
+                                    .fill(Color.black.opacity(0.08))
+                                    .frame(height: 12)
+                                Capsule()
+                                    .fill(Color(hex: 0xF7C300))
+                                    .frame(width: geo.size.width * progress, height: 12)
+                            }
+                        }
+                        .frame(height: 12)
+
+                        Text("- \(challenge.description)")
+                            .font(EcoTypography.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+
+                        Label("Нажми, чтобы посмотреть подсказку", systemImage: "lightbulb.fill")
+                            .font(EcoTypography.caption)
+                            .foregroundStyle(tint)
+                    }
                 }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
 
             HStack {
                 Label("+\(challenge.rewardPoints) очк.", systemImage: "star.fill")
@@ -2386,8 +2397,92 @@ private struct ChallengeAchievementCard: View {
     }
 }
 
+private struct ChallengeHintSheet: View {
+    let challenge: Challenge
+    @Environment(\.dismiss) private var dismiss
+
+    private var hintText: String {
+        let title = challenge.title.lowercased()
+        let description = challenge.description.lowercased()
+
+        if title.contains("пластик") || description.contains("пластик") {
+            return "Выбери любую активность в категории «Пластик». Например: многоразовая бутылка, эко-сумка вместо пакета или отказ от одноразового пластика."
+        }
+        if title.contains("транспорт") || description.contains("пешком") || description.contains("велосип") || description.contains("метро") {
+            return "Выбери любую активность в категории «Транспорт». Например: пешая прогулка, велосипед, метро или другой экологичный способ передвижения."
+        }
+        if title.contains("вод") || description.contains("вод") {
+            return "Выбери любую активность в категории «Вода». Например: короткий душ, закрывать кран во время чистки зубов или другая привычка на экономию воды."
+        }
+        if title.contains("энерг") || description.contains("энерг") {
+            return "Выбери любую активность в категории «Энергия». Например: выключать лишний свет, отключать зарядку из розетки или использовать энергосберегающую привычку."
+        }
+        if title.contains("сортиров") || title.contains("отход") || description.contains("переработ") {
+            return "Выбери любую активность по отходам и переработке. Например: сортировка бумаги, сдача пластика на переработку или отказ от лишнего мусора."
+        }
+        if title.contains("шопинг") || description.contains("упаков") || title.contains("покуп") {
+            return "Выбери любую активность из осознанных покупок. Например: товар без лишней упаковки, локальные продукты или многоразовые вещи."
+        }
+        if title.contains("комьюнити") || description.contains("пост") {
+            return "Для этого челленджа нужно делиться в ленте. Добавь пост в разделе новостей о своей экопривычке или результате."
+        }
+        if title.contains("эко-мастер") || description.contains("очков") {
+            return "Для этого челленджа просто продолжай выполнять любые активности. Очки суммируются, и когда дойдешь до нужного числа, челлендж откроется."
+        }
+        return "Открой подходящую категорию и выбери любую активность, которая соответствует описанию челленджа. Подойдут любые действия по теме этого задания."
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                EcoBackground()
+
+                VStack(spacing: 18) {
+                    AchievementBadgeView(challenge: challenge, size: 96)
+
+                    VStack(spacing: 8) {
+                        Text(challenge.title)
+                            .font(EcoTypography.title1)
+                            .foregroundStyle(EcoTheme.ink)
+                            .multilineTextAlignment(.center)
+
+                        Text(hintText)
+                            .font(EcoTypography.body)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(3)
+                    }
+
+                    HStack(spacing: 10) {
+                        CelebrationPill(text: "\(min(challenge.currentCount, challenge.targetCount))/\(challenge.targetCount)", icon: "flag.fill", tint: EcoTheme.primary)
+                        CelebrationPill(text: "+\(challenge.rewardPoints) очк.", icon: "star.fill", tint: Color(hex: 0xD89A00))
+                    }
+
+                    Button("Понятно") {
+                        dismiss()
+                    }
+                    .buttonStyle(DuoPrimaryButtonStyle())
+                }
+                .padding(24)
+                .background(Color.white.opacity(0.94), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(Color.white.opacity(0.75), lineWidth: 1)
+                )
+                .padding(.horizontal, 20)
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Закрыть") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
 private struct ChallengeClaimCelebrationOverlay: View {
     let challenge: Challenge
+    let onDismiss: () -> Void
     @State private var badgeScale: CGFloat = 0.5
     @State private var glowOpacity = 0.0
     @State private var ringScale: CGFloat = 0.7
@@ -2475,6 +2570,10 @@ private struct ChallengeClaimCelebrationOverlay: View {
                     sparkleRotation = 12
                 }
             }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onDismiss()
         }
     }
 }

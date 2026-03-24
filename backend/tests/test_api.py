@@ -22,9 +22,6 @@ class BackendAPITests(unittest.TestCase):
             future=True,
         )
         cls.SessionLocal = sessionmaker(bind=cls.engine, autoflush=False, autocommit=False, future=True)
-        Base.metadata.create_all(cls.engine)
-        with cls.SessionLocal() as db:
-            ensure_seed_data(db)
 
         def override_get_db():
             db = cls.SessionLocal()
@@ -35,6 +32,12 @@ class BackendAPITests(unittest.TestCase):
 
         app.dependency_overrides[get_db] = override_get_db
         cls.client = TestClient(app)
+
+    def setUp(self) -> None:
+        Base.metadata.drop_all(self.engine)
+        Base.metadata.create_all(self.engine)
+        with self.SessionLocal() as db:
+            ensure_seed_data(db)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -59,6 +62,7 @@ class BackendAPITests(unittest.TestCase):
         self.assertEqual(bootstrap_body["user"]["email"], "user@ecoiz.app")
         self.assertGreaterEqual(len(bootstrap_body["activities"]), 2)
         self.assertGreaterEqual(len(bootstrap_body["chatMessages"]), 1)
+        self.assertEqual(len(bootstrap_body["challenges"]), 5)
 
         chat = self.client.post(
             "/chat/messages",
@@ -150,7 +154,66 @@ class BackendAPITests(unittest.TestCase):
             headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(achievements.status_code, 200)
-        self.assertGreaterEqual(len(achievements.json()), 3)
+        self.assertGreaterEqual(len(achievements.json()), 15)
+
+        created_category = self.client.post(
+            "/admin/categories",
+            json={
+                "name": "Воздух",
+                "description": "Привычки для чистого воздуха",
+                "color": "#7BC6CC",
+                "icon": "wind",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(created_category.status_code, 201)
+        created_category_body = created_category.json()
+
+        created_habit = self.client.post(
+            "/admin/habits",
+            json={
+                "title": "Проветривать комнату осознанно",
+                "description": "Короткое и эффективное проветривание",
+                "category": "Воздух",
+                "points": 6,
+                "co2Value": 0.1,
+                "waterValue": 0.0,
+                "energyValue": 0.0,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(created_habit.status_code, 201)
+        created_habit_body = created_habit.json()
+
+        created_achievement = self.client.post(
+            "/admin/achievements",
+            json={
+                "title": "Тестовая ачивка",
+                "description": "Проверка создания achievement",
+                "icon": "star.fill",
+                "targetValue": 2,
+                "rewardPoints": 15,
+                "badgeTintHex": 4497988,
+                "badgeBackgroundHex": 15464671,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(created_achievement.status_code, 201)
+        created_achievement_body = created_achievement.json()
+
+        created_post = self.client.post(
+            "/admin/posts",
+            json={
+                "author": "Admin",
+                "content": "Пост для проверки admin CRUD",
+                "visibility": "PUBLIC",
+                "state": "Published",
+                "reportsCount": 0,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(created_post.status_code, 201)
+        created_post_body = created_post.json()
 
         posts = self.client.get(
             "/admin/posts",
@@ -158,6 +221,30 @@ class BackendAPITests(unittest.TestCase):
         )
         self.assertEqual(posts.status_code, 200)
         self.assertGreaterEqual(len(posts.json()), 2)
+
+        deleted_post = self.client.delete(
+            f"/admin/posts/{created_post_body['id']}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(deleted_post.status_code, 204)
+
+        deleted_achievement = self.client.delete(
+            f"/admin/achievements/{created_achievement_body['id']}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(deleted_achievement.status_code, 204)
+
+        deleted_habit = self.client.delete(
+            f"/admin/habits/{created_habit_body['id']}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(deleted_habit.status_code, 204)
+
+        deleted_category = self.client.delete(
+            f"/admin/categories/{created_category_body['id']}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(deleted_category.status_code, 204)
 
     def test_claim_completed_challenge(self) -> None:
         login = self.client.post(
@@ -203,6 +290,37 @@ class BackendAPITests(unittest.TestCase):
             headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(second_claim.status_code, 409)
+
+    def test_unlocks_five_more_challenges_on_level_up(self) -> None:
+        login = self.client.post(
+            "/auth/login",
+            json={"email": "user@ecoiz.app", "password": "password123"},
+        )
+        self.assertEqual(login.status_code, 200)
+        token = login.json()["token"]
+
+        before = self.client.get(
+            "/bootstrap",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(before.status_code, 200)
+        self.assertEqual(len(before.json()["challenges"]), 5)
+
+        level_up = self.client.post(
+            "/activities",
+            json={
+                "category": "Энергия",
+                "title": "Большой апгрейд уровня",
+                "co2Saved": 1.0,
+                "points": 40,
+                "note": "",
+                "media": [],
+                "shareToNews": False,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(level_up.status_code, 201)
+        self.assertEqual(len(level_up.json()["challenges"]), 10)
 
 
 if __name__ == "__main__":

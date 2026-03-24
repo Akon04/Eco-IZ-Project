@@ -55,6 +55,10 @@ class UpdateCategoryRequest(BaseModel):
     icon: str
 
 
+class CreateCategoryRequest(UpdateCategoryRequest):
+    pass
+
+
 class HabitResponse(BaseModel):
     id: str
     title: str
@@ -80,6 +84,10 @@ class UpdateHabitRequest(BaseModel):
     energyValue: float
 
 
+class CreateHabitRequest(UpdateHabitRequest):
+    description: str = ""
+
+
 class AchievementResponse(BaseModel):
     id: str
     title: str
@@ -103,6 +111,11 @@ class UpdateAchievementRequest(BaseModel):
     rewardPoints: int
 
 
+class CreateAchievementRequest(UpdateAchievementRequest):
+    badgeTintHex: int = 0x43B244
+    badgeBackgroundHex: int = 0xEAF8DF
+
+
 class CommunityPostResponse(BaseModel):
     id: str
     author: str
@@ -124,6 +137,14 @@ class UpdatePostRequest(BaseModel):
     visibility: str
     state: str
     moderatorNote: str = ""
+
+
+class CreateAdminPostRequest(BaseModel):
+    author: str
+    content: str
+    visibility: str = "PUBLIC"
+    state: str = "Published"
+    reportsCount: int = 0
 
 
 class AdminIdentityResponse(BaseModel):
