@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 
 import { useToast } from "@/components/toast-provider";
-import { updatePost } from "@/lib/api/posts";
+import { deletePost, updatePost } from "@/lib/api/posts";
 import { queryKeys } from "@/lib/query-keys";
 import type { CommunityPost, UpdatePostPayload } from "@/lib/types";
 import { postFormSchema, type PostFormValues } from "@/lib/validation";
@@ -50,6 +50,24 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
       });
     },
   });
+  const deleteMutation = useMutation({
+    mutationFn: () => deletePost(post.id),
+    onSuccess: async () => {
+      showToast({
+        tone: "success",
+        title: "Post deleted",
+        description: `The post by ${post.author} was removed.`,
+      });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
+    },
+    onError: () => {
+      showToast({
+        tone: "error",
+        title: "Delete failed",
+        description: "The post could not be deleted.",
+      });
+    },
+  });
 
   useEffect(() => {
     reset({
@@ -62,6 +80,14 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
 
   function onSubmit(values: PostFormValues) {
     mutation.mutate(values);
+  }
+
+  function onDelete() {
+    const confirmed = window.confirm(
+      `Delete the post by ${post.author}? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    deleteMutation.mutate();
   }
 
   return (
@@ -145,6 +171,14 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
             }
           >
             Hide post
+          </button>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={onDelete}
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending ? "Deleting..." : "Delete post"}
           </button>
           <button
             type="button"

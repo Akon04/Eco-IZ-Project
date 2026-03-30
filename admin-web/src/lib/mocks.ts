@@ -1,4 +1,6 @@
 import type {
+  ActivityMetrics,
+  AdminActivity,
   Achievement,
   AdminUser,
   CommunityPost,
@@ -56,6 +58,54 @@ export const mockUsers: AdminUser[] = [
     status: "SUSPENDED",
   },
 ];
+
+export const mockActivities: AdminActivity[] = [
+  {
+    id: "activity-1",
+    userId: "user-1",
+    username: "akmaral",
+    userEmail: "akmaral@ecoiz.app",
+    category: "Транспорт",
+    title: "Пешая прогулка",
+    co2Saved: 1.5,
+    points: 20,
+    note: "Университет вместо такси",
+    createdAt: "2026-03-29T08:30:00Z",
+  },
+  {
+    id: "activity-2",
+    userId: "user-2",
+    username: "nurdana",
+    userEmail: "nurdana@ecoiz.app",
+    category: "Вода",
+    title: "Короткий душ",
+    co2Saved: 0,
+    points: 15,
+    note: "Сократила душ до 5 минут",
+    createdAt: "2026-03-29T09:10:00Z",
+  },
+  {
+    id: "activity-3",
+    userId: "user-3",
+    username: "green_step",
+    userEmail: "user1@ecoiz.app",
+    category: "Отходы",
+    title: "Сортировка бумаги",
+    co2Saved: 0,
+    points: 10,
+    note: "Раздельный сбор дома",
+    createdAt: "2026-03-28T14:00:00Z",
+  },
+];
+
+export const mockActivityMetrics: ActivityMetrics = {
+  totalActivities: mockActivities.length,
+  totalPoints: mockActivities.reduce((sum, item) => sum + item.points, 0),
+  totalCo2Saved: Number(
+    mockActivities.reduce((sum, item) => sum + item.co2Saved, 0).toFixed(1),
+  ),
+  uniqueUsers: new Set(mockActivities.map((item) => item.userId)).size,
+};
 
 export const mockCategories: EcoCategory[] = [
   {

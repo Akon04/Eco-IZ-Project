@@ -864,8 +864,8 @@ struct ChallengesView: View {
                         .padding(.bottom, 80)
                     }
 
-                    if let celebratingChallenge, isCelebrationVisible {
-                        ChallengeClaimCelebrationOverlay(challenge: celebratingChallenge) {
+                    if let activeCelebrationChallenge = celebratingChallenge, isCelebrationVisible {
+                        ChallengeClaimCelebrationOverlay(challenge: activeCelebrationChallenge) {
                             withAnimation(.easeInOut(duration: 0.25)) {
                                 isCelebrationVisible = false
                             }
@@ -2578,7 +2578,7 @@ private struct ChallengeClaimCelebrationOverlay: View {
     }
 }
 
-private struct CelebrationPill: View {
+struct CelebrationPill: View {
     let text: String
     let icon: String
     let tint: Color

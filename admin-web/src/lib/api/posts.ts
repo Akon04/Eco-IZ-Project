@@ -85,3 +85,21 @@ export async function updatePost(
     state: payload.state,
   };
 }
+
+export async function deletePost(postId: string): Promise<void> {
+  if (!isMockMode()) {
+    await apiRequest<void>(`/admin/posts/${postId}`, {
+      method: "DELETE",
+    });
+    return;
+  }
+
+  await wait(120);
+
+  const index = mockPosts.findIndex((item) => item.id === postId);
+  if (index === -1) {
+    throw new Error("Post not found");
+  }
+
+  mockPosts.splice(index, 1);
+}

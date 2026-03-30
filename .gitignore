@@ -7,3 +7,6 @@ admin-web/.env.local
 backend/.venv/
 backend/**/__pycache__/
 backend/*.egg-info/
+frontend/**/*.xcuserdata/
+frontend/**/*.xcuserstate
+frontend/**/xcuserdata/

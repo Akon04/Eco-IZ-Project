@@ -16,10 +16,15 @@ from app.models.user import Activity, User
 from app.schemas.admin import (
     AchievementMetricsResponse,
     AchievementResponse,
+    AdminActivityMetrics,
     AdminIdentityResponse,
+    AdminUserActivityResponse,
+    AdminUserChallengeResponse,
+    AdminUserDetailResponse,
     AdminLoginRequest,
     AdminSessionResponse,
     AdminUserMetrics,
+    AdminUserPostResponse,
     AdminUserResponse,
     CategoryMetricsResponse,
     CommunityPostResponse,
@@ -101,6 +106,56 @@ def serialize_admin_user(user: User) -> AdminUserResponse:
         postsCount=len(user.posts),
         createdAt=user.created_at,
         status=user.status,
+    )
+
+
+def serialize_admin_user_detail(user: User) -> AdminUserDetailResponse:
+    recent_activities = sorted(user.activities, key=lambda value: value.created_at, reverse=True)[:6]
+    recent_posts = sorted(user.posts, key=lambda value: value.created_at, reverse=True)[:6]
+    challenge_items = sorted(user.user_challenges, key=lambda value: (value.challenge.reward_points, value.challenge.title))
+
+    return AdminUserDetailResponse(
+        **serialize_admin_user(user).model_dump(),
+        fullName=user.full_name,
+        level=serialize_user(user).level,
+        co2SavedTotal=user.co2_saved_total,
+        adminNote=user.admin_note or "",
+        recentActivities=[
+            AdminUserActivityResponse(
+                **serialize_activity(item).model_dump(),
+                userId=str(user.id),
+                username=user.username,
+                userEmail=user.email,
+                note=item.note or "",
+            )
+            for item in recent_activities
+        ],
+        challenges=[
+            AdminUserChallengeResponse(**serialize_user_challenge(item).model_dump()) for item in challenge_items
+        ],
+        recentPosts=[
+            AdminUserPostResponse(
+                id=str(item.id),
+                author=item.author_name,
+                content=item.text,
+                visibility=item.visibility,
+                state=item.moderation_state,
+                reportsCount=item.reports_count,
+                createdAt=item.created_at,
+                mediaCount=len(item.media),
+            )
+            for item in recent_posts
+        ],
+    )
+
+
+def serialize_admin_activity(activity: Activity) -> AdminUserActivityResponse:
+    return AdminUserActivityResponse(
+        **serialize_activity(activity).model_dump(),
+        userId=str(activity.user.id),
+        username=activity.user.username,
+        userEmail=activity.user.email,
+        note=activity.note or "",
     )
 
 
@@ -234,7 +289,12 @@ def challenges(current_user: User = Depends(get_current_user), db: Session = Dep
 @router.get("/posts", response_model=PostsEnvelope)
 def posts(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> PostsEnvelope:
     user = fetch_user_with_relations(db, current_user.id)
-    return PostsEnvelope(posts=[serialize_post(item) for item in sorted(user.posts, key=lambda value: value.created_at, reverse=True)])
+    visible_posts = [
+        item
+        for item in sorted(user.posts, key=lambda value: value.created_at, reverse=True)
+        if item.moderation_state != "Hidden"
+    ]
+    return PostsEnvelope(posts=[serialize_post(item) for item in visible_posts])
 
 
 @router.get("/chat/messages", response_model=ChatEnvelope)
@@ -435,6 +495,26 @@ def admin_user_metrics(_: User = Depends(get_current_admin), db: Session = Depen
     )
 
 
+@router.get("/admin/users/{user_id}", response_model=AdminUserDetailResponse)
+def admin_user_detail(
+    user_id: str,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> AdminUserDetailResponse:
+    user = db.scalar(
+        select(User)
+        .options(
+            selectinload(User.activities),
+            selectinload(User.posts).selectinload(Post.media),
+            selectinload(User.user_challenges).selectinload(UserChallenge.challenge),
+        )
+        .where(User.id == parse_uuid(user_id))
+    )
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    return serialize_admin_user_detail(user)
+
+
 @router.patch("/admin/users/{user_id}", response_model=AdminUserResponse)
 def update_admin_user(
     user_id: str,
@@ -451,6 +531,49 @@ def update_admin_user(
     db.commit()
     db.refresh(user)
     return serialize_admin_user(user)
+
+
+@router.get("/admin/activities", response_model=list[AdminUserActivityResponse])
+def admin_activities(
+    search: str | None = None,
+    category: str | None = None,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> list[AdminUserActivityResponse]:
+    stmt = (
+        select(Activity)
+        .options(selectinload(Activity.user))
+        .order_by(Activity.created_at.desc())
+    )
+    if category:
+        stmt = stmt.where(Activity.category.ilike(category.strip()))
+    if search:
+        pattern = f"%{search.strip()}%"
+        stmt = (
+            stmt.join(Activity.user).where(
+                Activity.title.ilike(pattern)
+                | Activity.category.ilike(pattern)
+                | Activity.note.ilike(pattern)
+                | User.username.ilike(pattern)
+                | User.email.ilike(pattern)
+            )
+        )
+    activities = db.scalars(stmt).all()
+    return [serialize_admin_activity(item) for item in activities]
+
+
+@router.get("/admin/activities/metrics", response_model=AdminActivityMetrics)
+def admin_activity_metrics(
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> AdminActivityMetrics:
+    activities = db.scalars(select(Activity)).all()
+    return AdminActivityMetrics(
+        totalActivities=len(activities),
+        totalPoints=sum(item.points for item in activities),
+        totalCo2Saved=round(sum(item.co2_saved for item in activities), 2),
+        uniqueUsers=len({item.user_id for item in activities}),
+    )
 
 
 @router.get("/admin/categories", response_model=list[EcoCategoryResponse])

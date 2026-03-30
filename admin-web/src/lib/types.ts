@@ -15,6 +15,50 @@ export type AdminUser = {
   status: UserStatus;
 };
 
+export type AdminUserActivity = {
+  id: string;
+  category: string;
+  title: string;
+  co2Saved: number;
+  points: number;
+  createdAt: string;
+};
+
+export type AdminUserChallenge = {
+  id: string;
+  title: string;
+  description: string;
+  targetCount: number;
+  currentCount: number;
+  rewardPoints: number;
+  badgeSymbol: string;
+  badgeTintHex: number;
+  badgeBackgroundHex: number;
+  isCompleted: boolean;
+  isClaimed: boolean;
+};
+
+export type AdminUserPost = {
+  id: string;
+  author: string;
+  content: string;
+  visibility: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
+  state: "Published" | "Flagged" | "Needs review" | "Hidden";
+  reportsCount: number;
+  createdAt: string;
+  mediaCount: number;
+};
+
+export type AdminUserDetail = AdminUser & {
+  fullName: string;
+  level: string;
+  co2SavedTotal: number;
+  adminNote: string;
+  recentActivities: AdminUserActivity[];
+  challenges: AdminUserChallenge[];
+  recentPosts: AdminUserPost[];
+};
+
 export type UserFilters = {
   role?: UserRole | "ALL";
   status?: UserStatus | "ALL";
@@ -32,6 +76,31 @@ export type UserMetrics = {
   adminCount: number;
   needsReview: number;
   verifiedCount: number;
+};
+
+export type AdminActivity = {
+  id: string;
+  userId: string;
+  username: string;
+  userEmail: string;
+  category: string;
+  title: string;
+  co2Saved: number;
+  points: number;
+  note: string;
+  createdAt: string;
+};
+
+export type ActivityFilters = {
+  search?: string;
+  category?: string | "ALL";
+};
+
+export type ActivityMetrics = {
+  totalActivities: number;
+  totalPoints: number;
+  totalCo2Saved: number;
+  uniqueUsers: number;
 };
 
 export type EcoCategory = {

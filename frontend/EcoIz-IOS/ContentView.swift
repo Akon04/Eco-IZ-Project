@@ -10,6 +10,13 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var appState = AppState()
 
+    private var isAlertPresented: Binding<Bool> {
+        Binding(
+            get: { appState.alertMessage != nil },
+            set: { if !$0 { appState.alertMessage = nil } }
+        )
+    }
+
     var body: some View {
         ZStack {
             Group {
@@ -41,10 +48,7 @@ struct ContentView: View {
         .task {
             await appState.restoreSessionIfNeeded()
         }
-        .alert("Ошибка", isPresented: Binding(
-            get: { appState.alertMessage != nil },
-            set: { if !$0 { appState.alertMessage = nil } }
-        )) {
+        .alert("Ошибка", isPresented: isAlertPresented) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(appState.alertMessage ?? "")

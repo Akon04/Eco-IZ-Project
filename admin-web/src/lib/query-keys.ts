@@ -5,7 +5,13 @@ export const queryKeys = {
   users: {
     all: ["users"] as const,
     list: (filters: string) => ["users", "list", filters] as const,
+    detail: (userId: string) => ["users", "detail", userId] as const,
     metrics: ["users", "metrics"] as const,
+  },
+  activities: {
+    all: ["activities"] as const,
+    list: (filters: string) => ["activities", "list", filters] as const,
+    metrics: ["activities", "metrics"] as const,
   },
   categories: {
     all: ["categories"] as const,

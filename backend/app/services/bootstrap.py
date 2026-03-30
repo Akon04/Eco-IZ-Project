@@ -17,11 +17,25 @@ from app.schemas.bootstrap import (
 
 
 def user_level_number(points: int) -> int:
-    if points < 120:
+    if points < 200:
         return 1
-    if points < 320:
+    if points < 400:
         return 2
-    return 3
+    if points < 700:
+        return 3
+    if points < 1100:
+        return 4
+    if points < 1600:
+        return 5
+    if points < 2200:
+        return 6
+    if points < 3000:
+        return 7
+    if points < 4000:
+        return 8
+    if points < 5500:
+        return 9
+    return 10
 
 
 def user_level(points: int) -> str:
@@ -29,7 +43,21 @@ def user_level(points: int) -> str:
     if level_number == 1:
         return "Эко-новичок"
     if level_number == 2:
-        return "Эко-воин"
+        return "Эко-исследователь"
+    if level_number == 3:
+        return "Эко-помощник"
+    if level_number == 4:
+        return "Хранитель природы"
+    if level_number == 5:
+        return "Зеленый герой"
+    if level_number == 6:
+        return "Эко-наставник"
+    if level_number == 7:
+        return "Защитник планеты"
+    if level_number == 8:
+        return "Мастер устойчивости"
+    if level_number == 9:
+        return "Амбассадор Eco Iz"
     return "Хранитель Земли"
 
 
@@ -109,10 +137,15 @@ def serialize_chat_message(message: ChatMessage) -> ChatMessageResponse:
 
 
 def build_bootstrap(user: User) -> BootstrapResponse:
+    visible_posts = [
+        item
+        for item in sorted(user.posts, key=lambda value: value.created_at, reverse=True)
+        if item.moderation_state != "Hidden"
+    ]
     return BootstrapResponse(
         user=serialize_user(user),
         activities=[serialize_activity(item) for item in sorted(user.activities, key=lambda value: value.created_at, reverse=True)],
         challenges=[serialize_user_challenge(item) for item in user.user_challenges],
-        posts=[serialize_post(item) for item in sorted(user.posts, key=lambda value: value.created_at, reverse=True)],
+        posts=[serialize_post(item) for item in visible_posts],
         chatMessages=[serialize_chat_message(item) for item in sorted(user.chat_messages, key=lambda value: value.created_at)],
     )
