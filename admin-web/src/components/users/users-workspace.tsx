@@ -68,19 +68,19 @@ export function UsersWorkspace({
           <UserDetailPanel user={selectedUser} />
         ) : usersQuery.isLoading || usersQuery.isFetching ? (
           <StatePanel
-            title="Loading users"
-            description="Refreshing the current user directory and applying your filters."
+            title="Загружаем пользователей"
+            description="Обновляем список пользователей и применяем выбранные фильтры."
           />
         ) : usersQuery.isError ? (
           <StatePanel
-            title="Failed to load users"
-            description="The user directory could not be loaded. Try refreshing the page."
+            title="Не удалось загрузить пользователей"
+            description="Список пользователей сейчас недоступен. Попробуй обновить страницу."
             tone="error"
           />
         ) : (
           <StatePanel
-            title="No users found"
-            description="Clear the search or change role and status filters to see users again."
+            title="Пользователи не найдены"
+            description="Сбрось поиск или измени фильтры по роли и статусу, чтобы снова увидеть пользователей."
             tone="warning"
           />
         )}

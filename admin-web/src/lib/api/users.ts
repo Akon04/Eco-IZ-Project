@@ -164,3 +164,20 @@ export async function updateAdminUser(
     status: payload.status,
   };
 }
+
+export async function deleteAdminUser(userId: string): Promise<void> {
+  if (!isMockMode()) {
+    return apiRequest<void>(`/admin/users/${userId}`, {
+      method: "DELETE",
+    });
+  }
+
+  await wait(120);
+
+  const index = mockUsers.findIndex((item) => item.id === userId);
+  if (index === -1) {
+    throw new Error("User not found");
+  }
+
+  mockUsers.splice(index, 1);
+}

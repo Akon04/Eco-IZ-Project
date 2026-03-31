@@ -9,6 +9,23 @@ type HabitTableProps = {
   onFilterChange: (filters: HabitFilters) => void;
 };
 
+function habitCategoryRowClass(category: string) {
+  switch (category) {
+    case "Транспорт":
+      return "habit-row-transport";
+    case "Вода":
+      return "habit-row-water";
+    case "Пластик":
+      return "habit-row-plastic";
+    case "Отходы":
+      return "habit-row-waste";
+    case "Энергия":
+      return "habit-row-energy";
+    default:
+      return "";
+  }
+}
+
 export function HabitTable({
   habits,
   selectedHabitId,
@@ -21,24 +38,21 @@ export function HabitTable({
     <article className="card">
       <div className="section-head">
         <div>
-          <h2 className="section-title">Habit catalog</h2>
-          <p className="muted">
-            Prepared for `GET /admin/habits` and `PATCH /admin/habits/:id`.
-          </p>
+          <h2 className="section-title">Каталог активностей</h2>
         </div>
         <div className="toolbar">
           <label className="inline-field inline-field-wide">
-            <span className="sr-only">Search habits</span>
+            <span className="sr-only">Поиск активностей</span>
             <input
               value={filters.search ?? ""}
               onChange={(event) =>
                 onFilterChange({ ...filters, search: event.target.value })
               }
-              placeholder="Search title or category"
+              placeholder="Поиск по названию или категории"
             />
           </label>
           <label className="inline-field">
-            <span className="sr-only">Category filter</span>
+            <span className="sr-only">Фильтр по категории</span>
             <select
               value={filters.category ?? "ALL"}
               onChange={(event) =>
@@ -48,7 +62,7 @@ export function HabitTable({
                 })
               }
             >
-              <option value="ALL">ALL</option>
+              <option value="ALL">Все</option>
               {categoryOptions.map((category) => (
                 <option key={category} value={category}>
                   {category}
@@ -63,19 +77,19 @@ export function HabitTable({
         <table>
           <thead>
             <tr>
-              <th>Title</th>
-              <th>Category</th>
-              <th>Points</th>
+              <th>Активность</th>
+              <th>Категория</th>
+              <th>Баллы</th>
               <th>CO2</th>
-              <th>Water</th>
-              <th>Energy</th>
+              <th>Вода</th>
+              <th>Энергия</th>
             </tr>
           </thead>
           <tbody>
             {habits.map((habit) => (
               <tr
                 key={habit.id}
-                className={selectedHabitId === habit.id ? "table-row-active" : ""}
+                className={`${selectedHabitId === habit.id ? "table-row-active " : ""}${habitCategoryRowClass(habit.category)}`.trim()}
                 onClick={() => onSelect(habit.id)}
               >
                 <td>{habit.title}</td>

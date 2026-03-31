@@ -17,28 +17,32 @@ export function ActivityTable({
   onSelect,
   onFilterChange,
 }: ActivityTableProps) {
+  function formatDate(value: string) {
+    return new Intl.DateTimeFormat("ru-RU", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  }
+
   return (
     <article className="card">
       <div className="section-head">
         <div>
-          <h2 className="section-title">Activity log</h2>
-          <p className="muted">
-            Prepared for `GET /admin/activities` to review user actions and eco impact.
-          </p>
+          <h2 className="section-title">Журнал активностей</h2>
         </div>
         <div className="toolbar">
           <label className="inline-field">
-            <span className="sr-only">Search activities</span>
+            <span className="sr-only">Поиск активностей</span>
             <input
               value={filters.search ?? ""}
               onChange={(event) =>
                 onFilterChange({ ...filters, search: event.target.value })
               }
-              placeholder="Search user, title, note, or category"
+              placeholder="Поиск по пользователю, названию, заметке или категории"
             />
           </label>
           <label className="inline-field">
-            <span className="sr-only">Category filter</span>
+            <span className="sr-only">Фильтр по категории</span>
             <select
               value={filters.category ?? "ALL"}
               onChange={(event) =>
@@ -48,7 +52,7 @@ export function ActivityTable({
                 })
               }
             >
-              <option value="ALL">ALL</option>
+              <option value="ALL">Все</option>
               {categoryOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -63,12 +67,12 @@ export function ActivityTable({
         <table>
           <thead>
             <tr>
-              <th>User</th>
-              <th>Category</th>
-              <th>Activity</th>
-              <th>Points</th>
+              <th>Пользователь</th>
+              <th>Категория</th>
+              <th>Активность</th>
+              <th>Баллы</th>
               <th>CO2</th>
-              <th>Created</th>
+              <th>Создано</th>
             </tr>
           </thead>
           <tbody>
@@ -83,7 +87,7 @@ export function ActivityTable({
                 <td>{activity.title}</td>
                 <td>{activity.points}</td>
                 <td>{activity.co2Saved.toFixed(1)} kg</td>
-                <td>{activity.createdAt}</td>
+                <td>{formatDate(activity.createdAt)}</td>
               </tr>
             ))}
           </tbody>

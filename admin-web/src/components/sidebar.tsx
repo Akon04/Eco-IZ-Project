@@ -22,10 +22,10 @@ export function Sidebar() {
         ECO<span>IZ</span>
       </h1>
       <p className="sidebar-note">
-        Admin workspace for moderation, eco catalog management, and platform
-        analytics.
+        Единая админ-панель для модерации, eco-каталога и контроля данных
+        платформы.
       </p>
-      <nav className="nav-list" aria-label="Admin navigation">
+      <nav className="nav-list" aria-label="Навигация админки">
         {navigation.map((item) => {
           const isActive =
             item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -50,7 +50,7 @@ export function Sidebar() {
           </span>
         </div>
         <button type="button" className="ghost-button sidebar-button" onClick={handleLogout}>
-          Log out
+          Выйти
         </button>
       </div>
     </aside>

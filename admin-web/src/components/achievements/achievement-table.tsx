@@ -19,19 +19,16 @@ export function AchievementTable({
     <article className="card">
       <div className="section-head">
         <div>
-          <h2 className="section-title">Achievement directory</h2>
-          <p className="muted">
-            Prepared for `GET /admin/achievements` and `PATCH /admin/achievements/:id`.
-          </p>
+          <h2 className="section-title">Список ачивок</h2>
         </div>
         <label className="inline-field inline-field-wide">
-          <span className="sr-only">Search achievements</span>
+          <span className="sr-only">Поиск ачивок</span>
           <input
             value={filters.search ?? ""}
             onChange={(event) =>
               onFilterChange({ ...filters, search: event.target.value })
             }
-            placeholder="Search title, description, or icon"
+            placeholder="Поиск по названию, описанию или иконке"
           />
         </label>
       </div>
@@ -40,10 +37,10 @@ export function AchievementTable({
         <table>
           <thead>
             <tr>
-              <th>Title</th>
-              <th>Icon</th>
-              <th>Target</th>
-              <th>Reward</th>
+              <th>Название</th>
+              <th>Иконка</th>
+              <th>Цель</th>
+              <th>Награда</th>
             </tr>
           </thead>
           <tbody>

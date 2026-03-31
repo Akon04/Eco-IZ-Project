@@ -8,19 +8,19 @@ type HabitMetricsProps = {
 export function HabitMetricsCards({ metrics }: HabitMetricsProps) {
   const cards = [
     {
-      label: "Total habits",
+      label: "Всего активностей",
       value: metrics.totalHabits,
-      note: "Current catalog size",
+      note: "Размер текущего каталога",
     },
     {
-      label: "Total points",
+      label: "Всего баллов",
       value: metrics.totalPoints,
-      note: "Points across the current mock catalog",
+      note: "Сумма баллов по всему каталогу",
     },
     {
-      label: "Categories used",
+      label: "Категорий",
       value: metrics.categoriesUsed,
-      note: "Habit distribution across eco domains",
+      note: "Распределение активностей по eco-направлениям",
     },
   ];
 

@@ -19,8 +19,8 @@ export default async function PostsPage() {
   return (
     <>
       <PageHeader
-        title="Posts"
-        description="Moderate community content and review visibility issues."
+        title="Посты"
+        description="Модерация пользовательского контента и управление видимостью постов."
       />
       <PostsWorkspace initialPosts={posts} metrics={metrics} />
     </>

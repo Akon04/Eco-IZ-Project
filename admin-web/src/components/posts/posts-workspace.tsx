@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useDeferredValue, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -17,8 +18,10 @@ type PostsWorkspaceProps = {
 };
 
 export function PostsWorkspace({ initialPosts, metrics }: PostsWorkspaceProps) {
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams.get("search") ?? "";
   const [filters, setFilters] = useState<PostFilters>({
-    search: "",
+    search: initialSearch,
     state: "ALL",
     visibility: "ALL",
   });
@@ -65,19 +68,19 @@ export function PostsWorkspace({ initialPosts, metrics }: PostsWorkspaceProps) {
           <PostDetailPanel post={selectedPost} />
         ) : postsQuery.isLoading || postsQuery.isFetching ? (
           <StatePanel
-            title="Loading posts"
-            description="Refreshing the moderation queue and applying your filters."
+            title="Загружаем посты"
+            description="Обновляем очередь модерации и применяем выбранные фильтры."
           />
         ) : postsQuery.isError ? (
           <StatePanel
-            title="Failed to load posts"
-            description="The moderation queue could not be loaded. Try refreshing the page."
+            title="Не удалось загрузить посты"
+            description="Очередь модерации сейчас недоступна. Попробуй обновить страницу."
             tone="error"
           />
         ) : (
           <StatePanel
-            title="No posts found"
-            description="Clear the search or relax state and visibility filters to continue moderation."
+            title="Посты не найдены"
+            description="Сбрось поиск или ослабь фильтры по статусу и видимости."
             tone="warning"
           />
         )}

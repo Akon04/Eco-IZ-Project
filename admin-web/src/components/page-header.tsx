@@ -13,7 +13,7 @@ export function PageHeader({ title, description }: PageHeaderProps) {
         <p>{description}</p>
       </div>
       <div className="badge">
-        {appConfig.apiMode === "mock" ? "Mock mode" : "Live API mode"}
+        {appConfig.apiMode === "mock" ? "Mock режим" : "Live API режим"}
       </div>
     </header>
   );

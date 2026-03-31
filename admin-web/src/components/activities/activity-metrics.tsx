@@ -10,24 +10,24 @@ export function ActivityMetricsCards({
 }: ActivityMetricsCardsProps) {
   const cards = [
     {
-      label: "Total activities",
+      label: "Всего активностей",
       value: metrics.totalActivities,
-      note: "Current user action log size",
+      note: "Размер общего журнала действий",
     },
     {
-      label: "Total points",
+      label: "Всего баллов",
       value: metrics.totalPoints,
-      note: "Points granted across all activities",
+      note: "Баллы, начисленные по всем активностям",
     },
     {
-      label: "CO2 saved",
+      label: "Сэкономлено CO2",
       value: `${metrics.totalCo2Saved.toFixed(1)} kg`,
-      note: "Combined eco impact from logged actions",
+      note: "Суммарный эко-эффект по зафиксированным действиям",
     },
     {
-      label: "Active users",
+      label: "Активные пользователи",
       value: metrics.uniqueUsers,
-      note: "Users represented in current activity data",
+      note: "Пользователи, у которых уже есть активности",
     },
   ];
 

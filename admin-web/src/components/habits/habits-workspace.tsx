@@ -16,6 +16,23 @@ type HabitsWorkspaceProps = {
   metrics: HabitMetrics;
 };
 
+const CATEGORY_ORDER: Record<string, number> = {
+  "Транспорт": 0,
+  "Вода": 1,
+  "Отходы": 2,
+  "Пластик": 3,
+  "Энергия": 4,
+};
+
+function sortHabitsByCategory(items: Habit[]) {
+  return [...items].sort((left, right) => {
+    const categoryDelta =
+      (CATEGORY_ORDER[left.category] ?? 99) - (CATEGORY_ORDER[right.category] ?? 99);
+    if (categoryDelta !== 0) return categoryDelta;
+    return left.title.localeCompare(right.title, "ru");
+  });
+}
+
 export function HabitsWorkspace({
   initialHabits,
   metrics,
@@ -54,12 +71,15 @@ export function HabitsWorkspace({
     placeholderData: (previousData) => previousData,
   });
 
-  const filteredHabits = habitsQuery.data;
+  const filteredHabits = useMemo(
+    () => sortHabitsByCategory(habitsQuery.data),
+    [habitsQuery.data],
+  );
 
   const categoryOptions = useMemo(() => {
     return Array.from(
       new Set(allHabitsQuery.data.map((habit) => habit.category)),
-    ).sort();
+    ).sort((left, right) => (CATEGORY_ORDER[left] ?? 99) - (CATEGORY_ORDER[right] ?? 99));
   }, [allHabitsQuery.data]);
 
   const selectedHabit =
@@ -86,19 +106,19 @@ export function HabitsWorkspace({
           />
         ) : habitsQuery.isLoading || habitsQuery.isFetching ? (
           <StatePanel
-            title="Loading habits"
-            description="Refreshing the current habit catalog and applying your filters."
+            title="Загружаем каталог"
+            description="Обновляем активности по категориям и применяем выбранные фильтры."
           />
         ) : habitsQuery.isError ? (
           <StatePanel
-            title="Failed to load habits"
-            description="The habit catalog could not be loaded. Try refreshing the page."
+            title="Не удалось загрузить каталог"
+            description="Каталог активностей сейчас недоступен. Попробуй обновить страницу."
             tone="error"
           />
         ) : (
           <StatePanel
-            title="No habits found"
-            description="Clear the search or reset the category filter to browse the full habit catalog."
+            title="Активности не найдены"
+            description="Сбрось поиск или фильтр по категории, чтобы снова увидеть весь каталог."
             tone="warning"
           />
         )}

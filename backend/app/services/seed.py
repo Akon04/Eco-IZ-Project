@@ -30,6 +30,41 @@ CHALLENGE_UNLOCK_ORDER = [
     "Эко-мастер",
 ]
 
+FIXED_CATEGORY_SPECS = [
+    ("Энергия", "Привычки для экономии электричества и тепла", "#F09A00", "bolt"),
+    ("Вода", "Привычки для бережного использования воды", "#1AA5E6", "drop"),
+    ("Пластик", "Сокращение одноразового пластика", "#43B244", "leaf"),
+    ("Транспорт", "Экологичные способы передвижения", "#7BC6CC", "figure.walk"),
+    ("Отходы", "Сортировка и сокращение мусора", "#8E8E93", "trash"),
+]
+
+FIXED_HABIT_SPECS = [
+    ("Пешая прогулка", "Заменить поездку пешей прогулкой", 20, 1.5, 0.0, 0.0, "Транспорт"),
+    ("Мотоцикл", "Выбрать более экономичный транспорт", 5, 0.2, 0.0, 0.0, "Транспорт"),
+    ("Велосипед", "Проехать маршрут на велосипеде", 25, 2.0, 0.0, 0.0, "Транспорт"),
+    ("Самокат", "Выбрать самокат вместо машины", 15, 0.8, 0.0, 0.0, "Транспорт"),
+    ("Машина", "Использовать машину осознанно", 0, 0.0, 0.0, 0.0, "Транспорт"),
+    ("Общ. транспорт", "Выбрать общественный транспорт", 15, 1.0, 0.0, 0.0, "Транспорт"),
+    ("Поезд", "Выбрать поезд вместо машины или самолета", 15, 1.2, 0.0, 0.0, "Транспорт"),
+    ("Совместная поездка", "Поехать вместе с кем-то вместо отдельной машины", 18, 1.3, 0.0, 0.0, "Транспорт"),
+    ("Короткий душ", "Сократить время душа", 15, 0.0, 25.0, 0.0, "Вода"),
+    ("Закрыл кран вовремя", "Закрыть кран во время бытовых действий", 10, 0.0, 8.0, 0.0, "Вода"),
+    ("Полная загрузка стирки", "Стирать только при полной загрузке", 20, 0.0, 40.0, 0.0, "Вода"),
+    ("Устранил утечку", "Исправить утечку воды", 30, 0.0, 60.0, 0.0, "Вода"),
+    ("Установил аэратор", "Установить аэратор на кран", 25, 0.0, 35.0, 0.0, "Вода"),
+    ("Без пакета", "Отказаться от одноразового пакета", 10, 0.0, 0.0, 0.0, "Пластик"),
+    ("Многоразовая сумка", "Использовать многоразовую сумку", 15, 0.0, 0.0, 0.0, "Пластик"),
+    ("Многоразовая бутылка", "Использовать многоразовую бутылку", 20, 0.0, 0.0, 0.0, "Пластик"),
+    ("Сдал пластик", "Сдать пластик на переработку", 25, 0.0, 0.0, 0.0, "Пластик"),
+    ("Сортировка", "Отсортировать отходы", 15, 0.0, 0.0, 0.0, "Отходы"),
+    ("Сдал вторсырье", "Сдать вторсырье", 20, 0.0, 0.0, 0.0, "Отходы"),
+    ("Компост", "Отправить органику в компост", 20, 0.0, 0.0, 0.0, "Отходы"),
+    ("Выключил свет", "Выключить свет, когда он не нужен", 10, 0.0, 0.0, 2.0, "Энергия"),
+    ("Отключил приборы из сети", "Отключить приборы из сети", 15, 0.0, 0.0, 3.0, "Энергия"),
+    ("Использую LED-лампы", "Поставить LED-лампы", 20, 0.0, 0.0, 5.0, "Энергия"),
+    ("Использую дневной свет", "Чаще использовать дневной свет", 15, 0.0, 0.0, 3.0, "Энергия"),
+]
+
 
 def assign_challenges_for_user(db: Session, user: User, challenges: list[Challenge]) -> None:
     unlocked_count = min(unlocked_challenge_count(user.points), len(challenges))
@@ -128,49 +163,55 @@ def ensure_seed_data(db: Session) -> None:
             db.flush()
         challenges.append(challenge)
 
+    allowed_category_names = {name for name, *_ in FIXED_CATEGORY_SPECS}
     categories: list[EcoCategory] = []
-    for name, description, color, icon in [
-        ("Энергия", "Привычки для экономии электричества и тепла", "#F09A00", "bolt"),
-        ("Вода", "Привычки для бережного использования воды", "#1AA5E6", "drop"),
-        ("Пластик", "Сокращение одноразового пластика", "#43B244", "leaf"),
-        ("Транспорт", "Экологичные способы передвижения", "#7BC6CC", "figure.walk"),
-        ("Отходы", "Сортировка и сокращение мусора", "#8E8E93", "trash"),
-        ("Покупки", "Осознанное потребление и упаковка", "#C08B5C", "bag"),
-    ]:
+    for name, description, color, icon in FIXED_CATEGORY_SPECS:
         category = db.scalar(select(EcoCategory).where(EcoCategory.name == name))
         if not category:
             category = EcoCategory(name=name, description=description, color=color, icon=icon)
             db.add(category)
             db.flush()
+        else:
+            category.description = description
+            category.color = color
+            category.icon = icon
         categories.append(category)
 
     category_by_name = {item.name: item for item in categories}
-    for title, description, points, co2_value, water_value, energy_value, category_name in [
-        ("Выключать лишний свет", "Отключай свет при выходе из комнаты", 10, 0.3, 0, 0.5, "Энергия"),
-        ("Отключать зарядку из розетки", "Не держи зарядные устройства подключенными без нужды", 8, 0.2, 0, 0.3, "Энергия"),
-        ("Короткий душ", "Сократи время душа до пяти минут", 12, 0.2, 8, 0.2, "Вода"),
-        ("Закрывать кран во время чистки зубов", "Экономь воду в быту каждый день", 7, 0.1, 5, 0, "Вода"),
-        ("Многоразовая бутылка", "Используй свою бутылку вместо одноразовой", 9, 0.1, 0, 0, "Пластик"),
-        ("Эко-сумка вместо пакета", "Бери многоразовую сумку в магазин", 8, 0.1, 0, 0, "Пластик"),
-        ("Прогулка пешком", "Замени короткую поездку пешей прогулкой", 11, 0.6, 0, 0, "Транспорт"),
-        ("Велосипед вместо машины", "Выбери велосипед для короткого маршрута", 14, 0.9, 0, 0, "Транспорт"),
-        ("Сортировка бумаги", "Отделяй бумагу и картон на переработку", 10, 0.2, 0, 0, "Отходы"),
-        ("Сдать пластик на переработку", "Отнеси пластик в пункт приема", 13, 0.4, 0, 0, "Отходы"),
-        ("Покупка без лишней упаковки", "Выбирай товары с минимальной упаковкой", 9, 0.1, 0, 0, "Покупки"),
-        ("Локальные продукты", "Выбери продукты местного производства", 10, 0.3, 0, 0, "Покупки"),
-    ]:
-        if not db.scalar(select(Habit).where(Habit.title == title)):
-            db.add(
-                Habit(
-                    title=title,
-                    description=description,
-                    points=points,
-                    co2_value=co2_value,
-                    water_value=water_value,
-                    energy_value=energy_value,
-                    category_id=category_by_name[category_name].id,
-                )
+    allowed_habit_titles = {title for title, *_ in FIXED_HABIT_SPECS}
+
+    for stale_habit in db.scalars(select(Habit)).all():
+        category = next((item for item in categories if item.id == stale_habit.category_id), None)
+        if not category or category.name not in allowed_category_names or stale_habit.title not in allowed_habit_titles:
+            db.delete(stale_habit)
+    db.flush()
+
+    for stale_category in db.scalars(select(EcoCategory)).all():
+        if stale_category.name not in allowed_category_names:
+            db.delete(stale_category)
+    db.flush()
+
+    for title, description, points, co2_value, water_value, energy_value, category_name in FIXED_HABIT_SPECS:
+        habit = db.scalar(select(Habit).where(Habit.title == title))
+        if not habit:
+            habit = Habit(
+                title=title,
+                description=description,
+                points=points,
+                co2_value=co2_value,
+                water_value=water_value,
+                energy_value=energy_value,
+                category_id=category_by_name[category_name].id,
             )
+            db.add(habit)
+            continue
+
+        habit.description = description
+        habit.points = points
+        habit.co2_value = co2_value
+        habit.water_value = water_value
+        habit.energy_value = energy_value
+        habit.category_id = category_by_name[category_name].id
 
     assign_challenges_for_user(db, user, challenges)
     db.flush()

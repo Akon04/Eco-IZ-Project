@@ -18,8 +18,8 @@ export default async function CategoriesPage() {
   return (
     <>
       <PageHeader
-        title="Categories"
-        description="Maintain eco categories used by habits and analytics."
+        title="Категории"
+        description="Поддержка системных eco-категорий, которые используются в каталоге и аналитике."
       />
       <CategoriesWorkspace initialCategories={categories} metrics={metrics} />
     </>

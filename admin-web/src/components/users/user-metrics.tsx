@@ -8,24 +8,24 @@ type UserMetricsProps = {
 export function UserMetricsCards({ metrics }: UserMetricsProps) {
   const cards = [
     {
-      label: "Total users",
+      label: "Всего пользователей",
       value: metrics.totalUsers,
-      note: "Current mock directory size",
+      note: "Текущий размер пользовательской базы",
     },
     {
-      label: "Admins",
+      label: "Админы",
       value: metrics.adminCount,
-      note: "Users with full access",
+      note: "Пользователи с полным доступом",
     },
     {
-      label: "Needs review",
+      label: "На проверке",
       value: metrics.needsReview,
-      note: "Accounts that require moderation",
+      note: "Аккаунты, которым нужна модерация",
     },
     {
-      label: "Verified email",
+      label: "Подтвержден email",
       value: metrics.verifiedCount,
-      note: "Ready for secure admin actions",
+      note: "Готовы к безопасным действиям админа",
     },
   ];
 

@@ -19,8 +19,8 @@ export default async function UsersPage() {
   return (
     <>
       <PageHeader
-        title="Users"
-        description="Manage admin roles, moderation access, and account status."
+        title="Пользователи"
+        description="Управление ролями, статусами и доступом к платформе."
       />
       <UsersWorkspace initialUsers={users} metrics={metrics} />
     </>

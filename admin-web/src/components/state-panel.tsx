@@ -12,7 +12,7 @@ export function StatePanel({
   return (
     <article className={`card state-panel state-panel-${tone}`}>
       <p className="state-kicker">
-        {tone === "error" ? "Issue" : tone === "warning" ? "Attention" : "State"}
+        {tone === "error" ? "Ошибка" : tone === "warning" ? "Внимание" : "Состояние"}
       </p>
       <h2 className="section-title">{title}</h2>
       <p className="muted">{description}</p>

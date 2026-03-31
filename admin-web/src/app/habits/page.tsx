@@ -18,8 +18,8 @@ export default async function HabitsPage() {
   return (
     <>
       <PageHeader
-        title="Habits"
-        description="Edit the habit catalog, points, and eco impact values."
+        title="Каталог активностей"
+        description="Просмотр фиксированного каталога активностей, баллов и eco-показателей."
       />
       <HabitsWorkspace initialHabits={habits} metrics={metrics} />
     </>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useDeferredValue, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -20,8 +21,10 @@ export function ActivitiesWorkspace({
   initialActivities,
   metrics,
 }: ActivitiesWorkspaceProps) {
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams.get("search") ?? "";
   const [filters, setFilters] = useState<ActivityFilters>({
-    search: "",
+    search: initialSearch,
     category: "ALL",
   });
   const [selectedActivityId, setSelectedActivityId] = useState(
@@ -86,19 +89,19 @@ export function ActivitiesWorkspace({
           <ActivityDetailPanel activity={selectedActivity} />
         ) : activitiesQuery.isLoading || activitiesQuery.isFetching ? (
           <StatePanel
-            title="Loading activities"
-            description="Refreshing the user activity journal and applying your filters."
+            title="Загружаем активности"
+            description="Обновляем журнал действий пользователей и применяем выбранные фильтры."
           />
         ) : activitiesQuery.isError ? (
           <StatePanel
-            title="Failed to load activities"
-            description="The activity journal could not be loaded. Try refreshing the page."
+            title="Не удалось загрузить активности"
+            description="Журнал активностей сейчас недоступен. Попробуй обновить страницу."
             tone="error"
           />
         ) : (
           <StatePanel
-            title="No activities found"
-            description="Clear the search or reset the category filter to review user actions again."
+            title="Активности не найдены"
+            description="Сбрось поиск или фильтр по категории, чтобы снова увидеть активности."
             tone="warning"
           />
         )}

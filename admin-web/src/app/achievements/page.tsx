@@ -21,8 +21,8 @@ export default async function AchievementsPage() {
   return (
     <>
       <PageHeader
-        title="Achievements"
-        description="Configure milestones, target values, and reward points."
+        title="Ачивки"
+        description="Просмотр milestone-каталога, target value и reward points."
       />
       <AchievementsWorkspace
         initialAchievements={achievements}

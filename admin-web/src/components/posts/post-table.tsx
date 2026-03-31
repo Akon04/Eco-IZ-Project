@@ -23,6 +23,21 @@ const visibilityOptions: Array<CommunityPost["visibility"] | "ALL"> = [
   "PRIVATE",
 ];
 
+const stateLabels: Record<CommunityPost["state"] | "ALL", string> = {
+  ALL: "Все статусы",
+  Published: "Опубликован",
+  Flagged: "Отмечен",
+  "Needs review": "Нужна проверка",
+  Hidden: "Скрыт",
+};
+
+const visibilityLabels: Record<CommunityPost["visibility"] | "ALL", string> = {
+  ALL: "Вся видимость",
+  PUBLIC: "PUBLIC",
+  FOLLOWERS: "FOLLOWERS",
+  PRIVATE: "PRIVATE",
+};
+
 export function PostTable({
   posts,
   selectedPostId,
@@ -30,28 +45,32 @@ export function PostTable({
   onSelect,
   onFilterChange,
 }: PostTableProps) {
+  function formatDate(value: string) {
+    return new Intl.DateTimeFormat("ru-RU", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  }
+
   return (
     <article className="card">
       <div className="section-head">
         <div>
-          <h2 className="section-title">Moderation queue</h2>
-          <p className="muted">
-            Prepared for `GET /admin/posts` and `PATCH /admin/posts/:id`.
-          </p>
+          <h2 className="section-title">Очередь модерации</h2>
         </div>
         <div className="toolbar">
           <label className="inline-field inline-field-wide">
-            <span className="sr-only">Search posts</span>
+            <span className="sr-only">Поиск постов</span>
             <input
               value={filters.search ?? ""}
               onChange={(event) =>
                 onFilterChange({ ...filters, search: event.target.value })
               }
-              placeholder="Search author or content"
+              placeholder="Поиск по автору или содержимому"
             />
           </label>
           <label className="inline-field">
-            <span className="sr-only">State filter</span>
+            <span className="sr-only">Фильтр по статусу</span>
             <select
               value={filters.state ?? "ALL"}
               onChange={(event) =>
@@ -63,13 +82,13 @@ export function PostTable({
             >
               {stateOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {stateLabels[option]}
                 </option>
               ))}
             </select>
           </label>
           <label className="inline-field">
-            <span className="sr-only">Visibility filter</span>
+            <span className="sr-only">Фильтр по видимости</span>
             <select
               value={filters.visibility ?? "ALL"}
               onChange={(event) =>
@@ -83,7 +102,7 @@ export function PostTable({
             >
               {visibilityOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {visibilityLabels[option]}
                 </option>
               ))}
             </select>
@@ -95,11 +114,11 @@ export function PostTable({
         <table>
           <thead>
             <tr>
-              <th>Author</th>
-              <th>Visibility</th>
-              <th>Status</th>
-              <th>Reports</th>
-              <th>Created</th>
+              <th>Автор</th>
+              <th>Видимость</th>
+              <th>Статус</th>
+              <th>Жалобы</th>
+              <th>Создан</th>
             </tr>
           </thead>
           <tbody>
@@ -112,10 +131,10 @@ export function PostTable({
                 <td>{post.author}</td>
                 <td>{post.visibility}</td>
                 <td>
-                  <span className="pill">{post.state}</span>
+                  <span className="pill">{stateLabels[post.state]}</span>
                 </td>
                 <td>{post.reportsCount}</td>
-                <td>{post.createdAt}</td>
+                <td>{formatDate(post.createdAt)}</td>
               </tr>
             ))}
           </tbody>

@@ -29,7 +29,7 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
     defaultValues: {
       visibility: post.visibility,
       state: post.state,
-      moderatorNote: "Moderation action will later be sent to backend audit logs.",
+      moderatorNote: "Действие модерации позже будет попадать в аудит-лог backend.",
     },
   });
   const mutation = useMutation({
@@ -37,16 +37,16 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
     onSuccess: async (updated) => {
       showToast({
         tone: "success",
-        title: "Post moderation saved",
-        description: `Moderation changes for ${updated.author} were saved.`,
+        title: "Модерация сохранена",
+        description: `Изменения для поста ${updated.author} сохранены.`,
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
     },
     onError: () => {
       showToast({
         tone: "error",
-        title: "Post moderation failed",
-        description: "The moderation changes could not be saved.",
+        title: "Не удалось сохранить",
+        description: "Изменения модерации не были сохранены.",
       });
     },
   });
@@ -55,16 +55,16 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
     onSuccess: async () => {
       showToast({
         tone: "success",
-        title: "Post deleted",
-        description: `The post by ${post.author} was removed.`,
+        title: "Пост удален",
+        description: `Пост от ${post.author} был удален.`,
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
     },
     onError: () => {
       showToast({
         tone: "error",
-        title: "Delete failed",
-        description: "The post could not be deleted.",
+        title: "Удаление не удалось",
+        description: "Не получилось удалить пост.",
       });
     },
   });
@@ -74,7 +74,7 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
       visibility: post.visibility,
       state: post.state,
       moderatorNote:
-        "Moderation action will later be sent to backend audit logs.",
+        "Действие модерации позже будет попадать в аудит-лог backend.",
     });
   }, [post, reset]);
 
@@ -84,38 +84,45 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
 
   function onDelete() {
     const confirmed = window.confirm(
-      `Delete the post by ${post.author}? This cannot be undone.`,
+      `Удалить пост от ${post.author}? Это действие нельзя отменить.`,
     );
     if (!confirmed) return;
     deleteMutation.mutate();
   }
 
+  function formatDate(value: string) {
+    return new Intl.DateTimeFormat("ru-RU", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  }
+
   return (
     <article className="card">
-      <h2 className="section-title">Selected post</h2>
+      <h2 className="section-title">Выбранный пост</h2>
       <div className="detail-stack">
         <div className="detail-row">
-          <span className="muted">Author</span>
+          <span className="muted">Автор</span>
           <strong>{post.author}</strong>
         </div>
         <div className="detail-row">
-          <span className="muted">Reports</span>
+          <span className="muted">Жалобы</span>
           <strong>{post.reportsCount}</strong>
         </div>
         <div className="detail-row">
-          <span className="muted">Created</span>
-          <strong>{post.createdAt}</strong>
+          <span className="muted">Создан</span>
+          <strong>{formatDate(post.createdAt)}</strong>
         </div>
       </div>
 
       <div className="card inset-card">
-        <p className="muted">Post content</p>
+        <p className="muted">Содержимое поста</p>
         <p>{post.content}</p>
       </div>
 
       <div className="form-shell" style={{ marginTop: 16 }}>
         <label className="field">
-          <span>Visibility</span>
+          <span>Видимость</span>
           <select {...register("visibility")}>
             <option value="PUBLIC">PUBLIC</option>
             <option value="FOLLOWERS">FOLLOWERS</option>
@@ -127,12 +134,12 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
         </label>
 
         <label className="field">
-          <span>Moderation state</span>
+          <span>Статус модерации</span>
           <select {...register("state")}>
-            <option value="Published">Published</option>
-            <option value="Flagged">Flagged</option>
-            <option value="Needs review">Needs review</option>
-            <option value="Hidden">Hidden</option>
+            <option value="Published">Опубликован</option>
+            <option value="Flagged">Отмечен</option>
+            <option value="Needs review">Нужна проверка</option>
+            <option value="Hidden">Скрыт</option>
           </select>
           {errors.state ? (
             <p className="field-error">{errors.state.message}</p>
@@ -140,7 +147,7 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
         </label>
 
         <label className="field">
-          <span>Moderator note</span>
+          <span>Заметка модератора</span>
           <textarea rows={4} {...register("moderatorNote")} />
           {errors.moderatorNote ? (
             <p className="field-error">{errors.moderatorNote.message}</p>
@@ -148,7 +155,7 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
         </label>
 
         <p className="form-status muted">
-          {isDirty ? "You have unsaved moderation changes." : "No unsaved changes."}
+          {isDirty ? "Есть несохраненные изменения." : "Изменений нет."}
         </p>
 
         <div className="button-row">
@@ -158,7 +165,7 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
             onClick={handleSubmit(onSubmit)}
             disabled={mutation.isPending || !isDirty}
           >
-            {mutation.isPending ? "Saving..." : "Save moderation"}
+            {mutation.isPending ? "Сохраняем..." : "Сохранить"}
           </button>
           <button
             type="button"
@@ -170,15 +177,15 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
               })
             }
           >
-            Hide post
+            Скрыть пост
           </button>
           <button
             type="button"
-            className="ghost-button"
+            className="ghost-button danger-button"
             onClick={onDelete}
             disabled={deleteMutation.isPending}
           >
-            {deleteMutation.isPending ? "Deleting..." : "Delete post"}
+            {deleteMutation.isPending ? "Удаляем..." : "Удалить пост"}
           </button>
           <button
             type="button"
@@ -188,12 +195,12 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
                 visibility: post.visibility,
                 state: post.state,
                 moderatorNote:
-                  "Moderation action will later be sent to backend audit logs.",
+                  "Действие модерации позже будет попадать в аудит-лог backend.",
               })
             }
             disabled={!isDirty}
           >
-            Reset
+            Сбросить
           </button>
         </div>
       </div>

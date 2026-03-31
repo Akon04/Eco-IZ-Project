@@ -45,8 +45,8 @@ export function AchievementDetailPanel({
     onSuccess: async (updated) => {
       showToast({
         tone: "success",
-        title: "Achievement updated",
-        description: `${updated.title} was updated successfully.`,
+        title: "Ачивка обновлена",
+        description: `Изменения для "${updated.title}" сохранены.`,
       });
       await queryClient.invalidateQueries({
         queryKey: queryKeys.achievements.all,
@@ -55,8 +55,8 @@ export function AchievementDetailPanel({
     onError: () => {
       showToast({
         tone: "error",
-        title: "Achievement update failed",
-        description: "The achievement changes could not be saved.",
+        title: "Не удалось сохранить",
+        description: "Изменения ачивки не были сохранены.",
       });
     },
   });
@@ -77,25 +77,25 @@ export function AchievementDetailPanel({
 
   return (
     <article className="card">
-      <h2 className="section-title">Selected achievement</h2>
+      <h2 className="section-title">Выбранная ачивка</h2>
       <div className="detail-stack">
         <div className="detail-row">
-          <span className="muted">Title</span>
+          <span className="muted">Название</span>
           <strong>{achievement.title}</strong>
         </div>
         <div className="detail-row">
-          <span className="muted">Icon</span>
+          <span className="muted">Иконка</span>
           <strong>{achievement.icon}</strong>
         </div>
         <div className="detail-row">
-          <span className="muted">Target</span>
+          <span className="muted">Цель</span>
           <strong>{achievement.targetValue}</strong>
         </div>
       </div>
 
       <div className="form-shell">
         <label className="field">
-          <span>Title</span>
+          <span>Название</span>
           <input {...register("title")} />
           {errors.title ? (
             <p className="field-error">{errors.title.message}</p>
@@ -103,7 +103,7 @@ export function AchievementDetailPanel({
         </label>
 
         <label className="field">
-          <span>Description</span>
+          <span>Описание</span>
           <textarea rows={4} {...register("description")} />
           {errors.description ? (
             <p className="field-error">{errors.description.message}</p>
@@ -112,13 +112,13 @@ export function AchievementDetailPanel({
 
         <div className="form-grid-two">
           <label className="field">
-            <span>Icon</span>
+            <span>Иконка</span>
             <input {...register("icon")} />
             {errors.icon ? <p className="field-error">{errors.icon.message}</p> : null}
           </label>
 
           <label className="field">
-            <span>Target value</span>
+            <span>Целевое значение</span>
             <input
               type="number"
               {...register("targetValue", { valueAsNumber: true })}
@@ -129,7 +129,7 @@ export function AchievementDetailPanel({
           </label>
 
           <label className="field">
-            <span>Reward points</span>
+            <span>Баллы награды</span>
             <input
               type="number"
               {...register("rewardPoints", { valueAsNumber: true })}
@@ -141,7 +141,7 @@ export function AchievementDetailPanel({
         </div>
 
         <p className="form-status muted">
-          {isDirty ? "You have unsaved achievement changes." : "No unsaved changes."}
+          {isDirty ? "Есть несохраненные изменения." : "Изменений нет."}
         </p>
 
         <div className="button-row">
@@ -151,7 +151,7 @@ export function AchievementDetailPanel({
             onClick={handleSubmit(onSubmit)}
             disabled={mutation.isPending || !isDirty}
           >
-            {mutation.isPending ? "Saving..." : "Save changes"}
+            {mutation.isPending ? "Сохраняем..." : "Сохранить"}
           </button>
           <button
             type="button"
@@ -163,7 +163,7 @@ export function AchievementDetailPanel({
               })
             }
           >
-            Add 10 reward points
+            Добавить 10 баллов
           </button>
           <button
             type="button"
@@ -179,7 +179,7 @@ export function AchievementDetailPanel({
             }
             disabled={!isDirty}
           >
-            Reset
+            Сбросить
           </button>
         </div>
       </div>

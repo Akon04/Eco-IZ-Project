@@ -123,8 +123,8 @@ export function DashboardWorkspace({
   if (hasError) {
     return (
       <StatePanel
-        title="Failed to load dashboard"
-        description="Some dashboard datasets could not be loaded. Try refreshing the page."
+        title="Не удалось загрузить панель"
+        description="Часть данных панели сейчас недоступна. Попробуй обновить страницу."
         tone="error"
       />
     );
@@ -161,68 +161,68 @@ export function DashboardWorkspace({
   if (isBootstrappingLiveDashboard) {
     return (
       <StatePanel
-        title="Loading dashboard"
-        description="Fetching live admin metrics, catalog data, and moderation state."
+        title="Загружаем панель"
+        description="Получаем live-метрики, каталоги и текущее состояние модерации."
       />
     );
   }
 
   const topMetrics = [
     {
-      label: "Registered users",
+      label: "Пользователи",
       value: String(userMetrics.totalUsers),
-      note: `${userMetrics.verifiedCount} verified, ${userMetrics.needsReview} need review`,
+      note: `${userMetrics.verifiedCount} подтверждено, ${userMetrics.needsReview} на проверке`,
     },
     {
-      label: "Habit catalog",
+      label: "Каталог активностей",
       value: String(habitMetrics.totalHabits),
-      note: `${habitMetrics.categoriesUsed} categories, ${habitMetrics.totalPoints} total points`,
+      note: `${habitMetrics.categoriesUsed} категорий, ${habitMetrics.totalPoints} баллов`,
     },
     {
-      label: "Posts to review",
+      label: "Посты на модерации",
       value: String(
         postMetrics.flaggedPosts + users.filter((u) => u.status === "REVIEW").length,
       ),
-      note: `${postMetrics.flaggedPosts} flagged posts, ${postMetrics.totalReports} total reports`,
+      note: `${postMetrics.flaggedPosts} отмечено, ${postMetrics.totalReports} жалоб`,
     },
     {
-      label: "Achievements",
+      label: "Ачивки",
       value: String(achievementMetrics.totalAchievements),
-      note: `${achievementMetrics.totalRewardPoints} reward points across catalog`,
+      note: `${achievementMetrics.totalRewardPoints} баллов награды в каталоге`,
     },
   ];
 
   const moderationQueue = posts
     .filter((post) => post.state === "Flagged" || post.state === "Needs review")
     .map((post) => ({
-      label: `Post by ${post.author}`,
+      label: `Пост от ${post.author}`,
       status: post.state,
-      owner: "Moderator",
+      owner: "Модератор",
     }));
 
   const operationsQueue = [
     {
-      label: "User accounts pending review",
-      status: `${userMetrics.needsReview} pending`,
-      owner: "Admin",
+      label: "Пользователи на проверке",
+      status: `${userMetrics.needsReview} ожидают`,
+      owner: "Админ",
     },
     {
-      label: "Category catalog status",
-      status: `${categoryMetrics.totalCategories} active`,
-      owner: "Content",
+      label: "Состояние категорий",
+      status: `${categoryMetrics.totalCategories} активно`,
+      owner: "Контент",
     },
     {
-      label: "Achievement catalog status",
-      status: `${achievements.length} configured`,
-      owner: "Product",
+      label: "Состояние ачивок",
+      status: `${achievements.length} настроено`,
+      owner: "Продукт",
     },
   ];
 
   const recentItems = [
-    `${postMetrics.flaggedPosts} posts are currently flagged for moderation`,
-    `${userMetrics.adminCount} admins and moderators have elevated access`,
-    `${habitMetrics.totalHabits} habits are available in the catalog`,
-    `${achievementMetrics.maxTargetValue} is the current highest achievement target`,
+    `${postMetrics.flaggedPosts} постов сейчас отмечены для модерации`,
+    `${userMetrics.adminCount} админов и модераторов имеют расширенный доступ`,
+    `${habitMetrics.totalHabits} активностей доступны в каталоге`,
+    `${achievementMetrics.maxTargetValue} — текущий максимальный target у ачивок`,
   ];
 
   return (
@@ -231,18 +231,14 @@ export function DashboardWorkspace({
 
       <section className="split" style={{ marginTop: 16 }}>
         <article className="card">
-          <h2 className="section-title">Priority Today</h2>
-          <p className="muted">
-            Start with moderation, then review admin-controlled catalog changes
-            across habits, categories, and achievements.
-          </p>
+          <h2 className="section-title">Фокус на сегодня</h2>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Queue</th>
-                  <th>Status</th>
-                  <th>Owner</th>
+                  <th>Очередь</th>
+                  <th>Статус</th>
+                  <th>Ответственный</th>
                 </tr>
               </thead>
               <tbody>
@@ -261,7 +257,7 @@ export function DashboardWorkspace({
         </article>
 
         <article className="card">
-          <h2 className="section-title">Operational snapshot</h2>
+          <h2 className="section-title">Сводка по системе</h2>
           <div className="grid">
             {recentItems.map((item) => (
               <div key={item} className="card" style={{ padding: 14 }}>

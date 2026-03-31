@@ -19,19 +19,16 @@ export function CategoryTable({
     <article className="card">
       <div className="section-head">
         <div>
-          <h2 className="section-title">Category directory</h2>
-          <p className="muted">
-            Prepared for `GET /admin/categories` and `PATCH /admin/categories/:id`.
-          </p>
+          <h2 className="section-title">Список категорий</h2>
         </div>
         <label className="inline-field inline-field-wide">
-          <span className="sr-only">Search categories</span>
+          <span className="sr-only">Поиск категорий</span>
           <input
             value={filters.search ?? ""}
             onChange={(event) =>
               onFilterChange({ ...filters, search: event.target.value })
             }
-            placeholder="Search name, description, or icon"
+            placeholder="Поиск по названию, описанию или иконке"
           />
         </label>
       </div>
@@ -40,10 +37,10 @@ export function CategoryTable({
         <table>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Description</th>
-              <th>Color</th>
-              <th>Icon</th>
+              <th>Название</th>
+              <th>Описание</th>
+              <th>Цвет</th>
+              <th>Иконка</th>
             </tr>
           </thead>
           <tbody>

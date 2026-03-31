@@ -19,8 +19,8 @@ export default async function ActivitiesPage() {
   return (
     <>
       <PageHeader
-        title="Activities"
-        description="Review user actions, eco impact values, and custom activity notes across the platform."
+        title="Активности"
+        description="Просмотр действий пользователей, eco-эффекта и custom note по всей платформе."
       />
       <ActivitiesWorkspace initialActivities={activities} metrics={metrics} />
     </>

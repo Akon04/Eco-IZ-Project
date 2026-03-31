@@ -565,6 +565,24 @@ def update_admin_user(
     return serialize_admin_user(user)
 
 
+@router.delete("/admin/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_admin_user(
+    user_id: str,
+    current_admin: User = Depends(get_current_root_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    user = db.scalar(select(User).where(User.id == parse_uuid(user_id)))
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    if user.id == current_admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot delete your own admin account.",
+        )
+    db.delete(user)
+    db.commit()
+
+
 @router.get("/admin/activities", response_model=list[AdminUserActivityResponse])
 def admin_activities(
     search: str | None = None,
@@ -600,6 +618,19 @@ def admin_activity_metrics(
         totalCo2Saved=round(sum(item.co2_saved for item in activities), 2),
         uniqueUsers=len({item.user_id for item in activities}),
     )
+
+
+@router.delete("/admin/activities/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_admin_activity(
+    activity_id: str,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    activity = db.scalar(select(Activity).where(Activity.id == parse_uuid(activity_id)))
+    if not activity:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity not found.")
+    db.delete(activity)
+    db.commit()
 
 
 @router.get("/admin/categories", response_model=list[EcoCategoryResponse])
@@ -654,18 +685,10 @@ def create_category(
     _: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ) -> EcoCategoryResponse:
-    if db.scalar(select(EcoCategory).where(EcoCategory.name == payload.name.strip())):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Category already exists.")
-    category = EcoCategory(
-        name=payload.name.strip(),
-        description=payload.description.strip(),
-        color=payload.color.strip(),
-        icon=payload.icon.strip(),
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="System categories are fixed and cannot be added from admin.",
     )
-    db.add(category)
-    db.commit()
-    db.refresh(category)
-    return serialize_category(category)
 
 
 @router.delete("/admin/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -722,9 +745,10 @@ def update_habit(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Habit not found.")
     category = db.scalar(select(EcoCategory).where(EcoCategory.name == payload.category.strip()))
     if not category:
-        category = EcoCategory(name=payload.category.strip(), description="", color="#43B244", icon="leaf")
-        db.add(category)
-        db.flush()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="System category not found.",
+        )
     habit.title = payload.title.strip()
     habit.points = payload.points
     habit.co2_value = payload.co2Value
@@ -745,9 +769,10 @@ def create_habit(
     category_name = payload.category.strip()
     category = db.scalar(select(EcoCategory).where(EcoCategory.name == category_name))
     if not category:
-        category = EcoCategory(name=category_name, description="", color="#43B244", icon="leaf")
-        db.add(category)
-        db.flush()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="System category not found.",
+        )
     habit = Habit(
         title=payload.title.strip(),
         description=payload.description.strip() or None,

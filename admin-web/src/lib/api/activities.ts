@@ -47,3 +47,20 @@ export async function getActivityMetrics(): Promise<ActivityMetrics> {
   await wait(40);
   return mockActivityMetrics;
 }
+
+export async function deleteActivity(activityId: string): Promise<void> {
+  if (!isMockMode()) {
+    return apiRequest<void>(`/admin/activities/${activityId}`, {
+      method: "DELETE",
+    });
+  }
+
+  await wait(120);
+
+  const index = mockActivities.findIndex((item) => item.id === activityId);
+  if (index === -1) {
+    throw new Error("Activity not found");
+  }
+
+  mockActivities.splice(index, 1);
+}

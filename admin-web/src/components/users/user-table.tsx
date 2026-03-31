@@ -16,6 +16,20 @@ const statusOptions: Array<UserStatus | "ALL"> = [
   "SUSPENDED",
 ];
 
+const roleLabels: Record<UserRole | "ALL", string> = {
+  ALL: "Все роли",
+  ADMIN: "Админ",
+  MODERATOR: "Модератор",
+  USER: "Пользователь",
+};
+
+const statusLabels: Record<UserStatus | "ALL", string> = {
+  ALL: "Все статусы",
+  ACTIVE: "Активный",
+  REVIEW: "На проверке",
+  SUSPENDED: "Приостановлен",
+};
+
 export function UserTable({
   users,
   selectedUserId,
@@ -23,28 +37,32 @@ export function UserTable({
   onSelect,
   onFilterChange,
 }: UserTableProps) {
+  function formatDate(value: string) {
+    return new Intl.DateTimeFormat("ru-RU", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  }
+
   return (
     <article className="card">
       <div className="section-head">
         <div>
-          <h2 className="section-title">User directory</h2>
-          <p className="muted">
-            Prepared for `GET /admin/users` and `PATCH /admin/users/:id`.
-          </p>
+          <h2 className="section-title">Список пользователей</h2>
         </div>
         <div className="toolbar">
           <label className="inline-field">
-            <span className="sr-only">Search users</span>
+            <span className="sr-only">Поиск пользователей</span>
             <input
               value={filters.search ?? ""}
               onChange={(event) =>
                 onFilterChange({ ...filters, search: event.target.value })
               }
-              placeholder="Search username or email"
+              placeholder="Поиск по username или email"
             />
           </label>
           <label className="inline-field">
-            <span className="sr-only">Role filter</span>
+            <span className="sr-only">Фильтр по роли</span>
             <select
               value={filters.role ?? "ALL"}
               onChange={(event) =>
@@ -56,13 +74,13 @@ export function UserTable({
             >
               {roleOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {roleLabels[option]}
                 </option>
               ))}
             </select>
           </label>
           <label className="inline-field">
-            <span className="sr-only">Status filter</span>
+            <span className="sr-only">Фильтр по статусу</span>
             <select
               value={filters.status ?? "ALL"}
               onChange={(event) =>
@@ -74,7 +92,7 @@ export function UserTable({
             >
               {statusOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {statusLabels[option]}
                 </option>
               ))}
             </select>
@@ -86,12 +104,12 @@ export function UserTable({
         <table>
           <thead>
             <tr>
-              <th>Username</th>
+              <th>Имя пользователя</th>
               <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Eco points</th>
-              <th>Created</th>
+              <th>Роль</th>
+              <th>Статус</th>
+              <th>Eco баллы</th>
+              <th>Создан</th>
             </tr>
           </thead>
           <tbody>
@@ -104,13 +122,13 @@ export function UserTable({
                 <td>{user.username}</td>
                 <td>{user.email}</td>
                 <td>
-                  <span className="pill">{user.role}</span>
+                  <span className="pill">{roleLabels[user.role]}</span>
                 </td>
                 <td>
-                  <span className="pill">{user.status}</span>
+                  <span className="pill">{statusLabels[user.status]}</span>
                 </td>
                 <td>{user.ecoPoints}</td>
-                <td>{user.createdAt}</td>
+                <td>{formatDate(user.createdAt)}</td>
               </tr>
             ))}
           </tbody>

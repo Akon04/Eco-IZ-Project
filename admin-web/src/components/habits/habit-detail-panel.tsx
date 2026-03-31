@@ -44,16 +44,16 @@ export function HabitDetailPanel({
     onSuccess: async (updated) => {
       showToast({
         tone: "success",
-        title: "Habit updated",
-        description: `${updated.title} was updated successfully.`,
+        title: "Активность обновлена",
+        description: `Изменения для "${updated.title}" сохранены.`,
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.habits.all });
     },
     onError: () => {
       showToast({
         tone: "error",
-        title: "Habit update failed",
-        description: "The habit changes could not be saved.",
+        title: "Не удалось сохранить",
+        description: "Изменения активности не были сохранены.",
       });
     },
   });
@@ -75,25 +75,25 @@ export function HabitDetailPanel({
 
   return (
     <article className="card">
-      <h2 className="section-title">Selected habit</h2>
+      <h2 className="section-title">Выбранная активность</h2>
       <div className="detail-stack">
         <div className="detail-row">
-          <span className="muted">Title</span>
+          <span className="muted">Название</span>
           <strong>{habit.title}</strong>
         </div>
         <div className="detail-row">
-          <span className="muted">Category</span>
+          <span className="muted">Категория</span>
           <strong>{habit.category}</strong>
         </div>
         <div className="detail-row">
-          <span className="muted">Points</span>
+          <span className="muted">Баллы</span>
           <strong>{habit.points}</strong>
         </div>
       </div>
 
       <div className="form-shell">
         <label className="field">
-          <span>Title</span>
+          <span>Название</span>
           <input {...register("title")} />
           {errors.title ? (
             <p className="field-error">{errors.title.message}</p>
@@ -101,7 +101,7 @@ export function HabitDetailPanel({
         </label>
 
         <label className="field">
-          <span>Category</span>
+          <span>Категория</span>
           <select {...register("category")}>
             {categoryOptions.map((category) => (
               <option key={category} value={category}>
@@ -116,7 +116,7 @@ export function HabitDetailPanel({
 
         <div className="form-grid-two">
           <label className="field">
-            <span>Points</span>
+            <span>Баллы</span>
             <input type="number" {...register("points", { valueAsNumber: true })} />
             {errors.points ? (
               <p className="field-error">{errors.points.message}</p>
@@ -124,7 +124,7 @@ export function HabitDetailPanel({
           </label>
 
           <label className="field">
-            <span>CO2 value</span>
+            <span>CO2 значение</span>
             <input
               type="number"
               step="0.1"
@@ -136,7 +136,7 @@ export function HabitDetailPanel({
           </label>
 
           <label className="field">
-            <span>Water value</span>
+            <span>Вода</span>
             <input
               type="number"
               {...register("waterValue", { valueAsNumber: true })}
@@ -147,7 +147,7 @@ export function HabitDetailPanel({
           </label>
 
           <label className="field">
-            <span>Energy value</span>
+            <span>Энергия</span>
             <input
               type="number"
               {...register("energyValue", { valueAsNumber: true })}
@@ -159,7 +159,7 @@ export function HabitDetailPanel({
         </div>
 
         <p className="form-status muted">
-          {isDirty ? "You have unsaved habit changes." : "No unsaved changes."}
+          {isDirty ? "Есть несохраненные изменения." : "Изменений нет."}
         </p>
 
         <div className="button-row">
@@ -169,7 +169,7 @@ export function HabitDetailPanel({
             onClick={handleSubmit(onSubmit)}
             disabled={mutation.isPending || !isDirty}
           >
-            {mutation.isPending ? "Saving..." : "Save changes"}
+            {mutation.isPending ? "Сохраняем..." : "Сохранить"}
           </button>
           <button
             type="button"
@@ -181,7 +181,7 @@ export function HabitDetailPanel({
               })
             }
           >
-            Add 5 points
+            Добавить 5 баллов
           </button>
           <button
             type="button"
@@ -198,7 +198,7 @@ export function HabitDetailPanel({
             }
             disabled={!isDirty}
           >
-            Reset
+            Сбросить
           </button>
         </div>
       </div>

@@ -4,8 +4,8 @@ export default function Loading() {
   return (
     <div className="auth-shell">
       <StatePanel
-        title="Loading admin workspace"
-        description="Preparing dashboard data and restoring the current session."
+        title="Загружаем админку"
+        description="Подготавливаем данные панели и восстанавливаем текущую сессию."
       />
     </div>
   );

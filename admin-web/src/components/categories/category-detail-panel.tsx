@@ -21,7 +21,7 @@ type CategoryDetailPanelProps = {
 export function CategoryDetailPanel({ category }: CategoryDetailPanelProps) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { register, handleSubmit, reset, setValue, formState: { errors, isDirty } } =
+  const { register, handleSubmit, reset, formState: { errors, isDirty } } =
     useForm<CategoryFormValues>({
       resolver: zodResolver(categoryFormSchema),
       defaultValues: {
@@ -36,16 +36,16 @@ export function CategoryDetailPanel({ category }: CategoryDetailPanelProps) {
     onSuccess: async (updated) => {
       showToast({
         tone: "success",
-        title: "Category updated",
-        description: `${updated.name} was updated successfully.`,
+        title: "Категория обновлена",
+        description: `Изменения для "${updated.name}" сохранены.`,
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
     },
     onError: () => {
       showToast({
         tone: "error",
-        title: "Category update failed",
-        description: "The category changes could not be saved.",
+        title: "Не удалось сохранить",
+        description: "Изменения категории не были сохранены.",
       });
     },
   });
@@ -65,31 +65,31 @@ export function CategoryDetailPanel({ category }: CategoryDetailPanelProps) {
 
   return (
     <article className="card">
-      <h2 className="section-title">Selected category</h2>
+      <h2 className="section-title">Выбранная категория</h2>
       <div className="detail-stack">
         <div className="detail-row">
-          <span className="muted">Name</span>
+          <span className="muted">Название</span>
           <strong>{category.name}</strong>
         </div>
         <div className="detail-row">
-          <span className="muted">Color</span>
+          <span className="muted">Цвет</span>
           <strong>{category.color}</strong>
         </div>
         <div className="detail-row">
-          <span className="muted">Icon</span>
+          <span className="muted">Иконка</span>
           <strong>{category.icon}</strong>
         </div>
       </div>
 
       <div className="form-shell">
         <label className="field">
-          <span>Name</span>
+          <span>Название</span>
           <input {...register("name")} />
           {errors.name ? <p className="field-error">{errors.name.message}</p> : null}
         </label>
 
         <label className="field">
-          <span>Description</span>
+          <span>Описание</span>
           <textarea rows={4} {...register("description")} />
           {errors.description ? (
             <p className="field-error">{errors.description.message}</p>
@@ -98,7 +98,7 @@ export function CategoryDetailPanel({ category }: CategoryDetailPanelProps) {
 
         <div className="form-grid-two">
           <label className="field">
-            <span>Color</span>
+            <span>Цвет</span>
             <input {...register("color")} />
             {errors.color ? (
               <p className="field-error">{errors.color.message}</p>
@@ -106,14 +106,14 @@ export function CategoryDetailPanel({ category }: CategoryDetailPanelProps) {
           </label>
 
           <label className="field">
-            <span>Icon</span>
+            <span>Иконка</span>
             <input {...register("icon")} />
             {errors.icon ? <p className="field-error">{errors.icon.message}</p> : null}
           </label>
         </div>
 
         <p className="form-status muted">
-          {isDirty ? "You have unsaved category changes." : "No unsaved changes."}
+          {isDirty ? "Есть несохраненные изменения." : "Изменений нет."}
         </p>
 
         <div className="button-row">
@@ -123,34 +123,7 @@ export function CategoryDetailPanel({ category }: CategoryDetailPanelProps) {
             onClick={handleSubmit(onSubmit)}
             disabled={mutation.isPending || !isDirty}
           >
-            {mutation.isPending ? "Saving..." : "Save changes"}
-          </button>
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={() =>
-              setValue("color", category.color.toLowerCase(), {
-                shouldValidate: true,
-                shouldDirty: true,
-              })
-            }
-          >
-            Normalize color
-          </button>
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={() =>
-              reset({
-                name: category.name,
-                description: category.description,
-                color: category.color,
-                icon: category.icon,
-              })
-            }
-            disabled={!isDirty}
-          >
-            Reset
+            {mutation.isPending ? "Сохраняем..." : "Сохранить"}
           </button>
         </div>
       </div>
