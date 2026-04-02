@@ -31,6 +31,7 @@ class AdminUserActivityResponse(BaseModel):
     co2Saved: float
     points: int
     note: str
+    media: list["AdminMediaResponse"]
     createdAt: datetime
 
 
@@ -57,6 +58,12 @@ class AdminUserPostResponse(BaseModel):
     reportsCount: int
     createdAt: datetime
     mediaCount: int
+
+
+class AdminMediaResponse(BaseModel):
+    id: str
+    kind: str
+    base64Data: str
 
 
 class AdminUserDetailResponse(AdminUserResponse):
@@ -178,12 +185,14 @@ class CommunityPostResponse(BaseModel):
     visibility: str
     state: str
     reportsCount: int
+    media: list[AdminMediaResponse]
     createdAt: datetime
 
 
 class PostMetricsResponse(BaseModel):
     totalPosts: int
     flaggedPosts: int
+    needsReviewPosts: int
     hiddenPosts: int
     totalReports: int
 

@@ -65,7 +65,7 @@ export default async function DashboardPage() {
     <>
       <PageHeader
         title="Панель"
-        description="Общий обзор платформы, модерации и eco-активности."
+        description="Общий обзор платформы, модерации и эко-активности."
       />
       <DashboardWorkspace
         initialUserMetrics={userMetrics}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth-provider";
+import { AdminIcon } from "@/components/ui/admin-icon";
 import { getNavigation } from "@/lib/navigation";
 
 export function Sidebar() {
@@ -29,7 +30,7 @@ export function Sidebar() {
         ECO<span>IZ</span>
       </h1>
       <p className="sidebar-note">
-        Единая админ-панель для модерации, eco-каталога и контроля данных
+        Единая админ-панель для модерации, эко-каталога и контроля данных
         платформы.
       </p>
       <nav className="nav-list" aria-label="Навигация админки">
@@ -43,6 +44,9 @@ export function Sidebar() {
               href={item.href}
               className={`nav-link${isActive ? " active" : ""}`}
             >
+              <span className="nav-icon">
+                <AdminIcon name={item.icon} className="nav-icon-svg" />
+              </span>
               {item.label}
             </Link>
           );
@@ -56,7 +60,11 @@ export function Sidebar() {
             {user?.role ? roleLabels[user.role] : ""} · {user?.email}
           </span>
         </div>
-        <button type="button" className="ghost-button sidebar-button" onClick={handleLogout}>
+        <button
+          type="button"
+          className="ghost-button danger-button sidebar-button"
+          onClick={handleLogout}
+        >
           Выйти
         </button>
       </div>

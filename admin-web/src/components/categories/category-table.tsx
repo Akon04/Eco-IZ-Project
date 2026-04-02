@@ -1,5 +1,22 @@
 import type { CategoryFilters, EcoCategory } from "@/lib/types";
 
+function categoryColorClass(categoryName: string) {
+  switch (categoryName) {
+    case "Транспорт":
+      return "category-color-chip category-color-transport";
+    case "Вода":
+      return "category-color-chip category-color-water";
+    case "Пластик":
+      return "category-color-chip category-color-plastic";
+    case "Отходы":
+      return "category-color-chip category-color-waste";
+    case "Энергия":
+      return "category-color-chip category-color-energy";
+    default:
+      return "pill";
+  }
+}
+
 type CategoryTableProps = {
   categories: EcoCategory[];
   selectedCategoryId: string;
@@ -57,7 +74,9 @@ export function CategoryTable({
                 <td>{category.name}</td>
                 <td>{category.description}</td>
                 <td>
-                  <span className="pill">{category.color}</span>
+                  <span className={categoryColorClass(category.name)}>
+                    {category.color}
+                  </span>
                 </td>
                 <td>{category.icon}</td>
               </tr>

@@ -11,16 +11,19 @@ export function HabitMetricsCards({ metrics }: HabitMetricsProps) {
       label: "Всего активностей",
       value: metrics.totalHabits,
       note: "Размер текущего каталога",
+      icon: "habits",
     },
     {
       label: "Всего баллов",
       value: metrics.totalPoints,
       note: "Сумма баллов по всему каталогу",
+      icon: "points",
     },
     {
       label: "Категорий",
       value: metrics.categoriesUsed,
-      note: "Распределение активностей по eco-направлениям",
+      note: "Распределение активностей по эко-направлениям",
+      icon: "categories",
     },
   ];
 

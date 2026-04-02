@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 
+import { EvidenceGallery } from "@/components/media/evidence-gallery";
 import { useToast } from "@/components/toast-provider";
 import { deletePost, updatePost } from "@/lib/api/posts";
 import { queryKeys } from "@/lib/query-keys";
@@ -125,8 +126,10 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
 
       <div className="card inset-card">
         <p className="muted">Содержимое поста</p>
-        <p>{post.content}</p>
+        <p>{post.content || "У этого поста нет текста, только медиа."}</p>
       </div>
+
+      <EvidenceGallery media={post.media} title="Фото в посте" />
 
       <div className="form-shell" style={{ marginTop: 16 }}>
         <label className="field">

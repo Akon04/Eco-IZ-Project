@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { EvidenceGallery } from "@/components/media/evidence-gallery";
 import { useToast } from "@/components/toast-provider";
 import { deleteActivity } from "@/lib/api/activities";
 import { queryKeys } from "@/lib/query-keys";
@@ -95,6 +96,7 @@ export function ActivityDetailPanel({ activity }: ActivityDetailPanelProps) {
             readOnly
           />
         </label>
+        <EvidenceGallery media={activity.media} title="Фото-отчет активности" />
         <p className="form-status muted">
           Активности пока редактируются только частично. Этот блок нужен для просмотра, поддержки и удаления.
         </p>

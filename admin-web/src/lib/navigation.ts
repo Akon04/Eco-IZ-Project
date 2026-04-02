@@ -1,13 +1,13 @@
 import type { AdminAppRole } from "@/lib/types";
 
 const navigation = [
-  { href: "/", label: "Панель" },
-  { href: "/users", label: "Пользователи" },
-  { href: "/activities", label: "Активности" },
-  { href: "/categories", label: "Категории" },
-  { href: "/habits", label: "Каталог активностей" },
-  { href: "/achievements", label: "Ачивки" },
-  { href: "/posts", label: "Посты" },
+  { href: "/", label: "Панель", icon: "dashboard" },
+  { href: "/users", label: "Пользователи", icon: "users" },
+  { href: "/activities", label: "Активности", icon: "activities" },
+  { href: "/categories", label: "Категории", icon: "categories" },
+  { href: "/habits", label: "Каталог активностей", icon: "habits" },
+  { href: "/achievements", label: "Ачивки", icon: "achievements" },
+  { href: "/posts", label: "Посты", icon: "posts" },
 ] as const;
 
 export function getNavigation(role?: AdminAppRole | null) {

@@ -13,16 +13,19 @@ export function AchievementMetricsCards({
       label: "Всего ачивок",
       value: metrics.totalAchievements,
       note: "Текущий каталог ачивок",
+      icon: "achievements",
     },
     {
       label: "Баллы наград",
       value: metrics.totalRewardPoints,
       note: "Суммарные награды по всем ачивкам",
+      icon: "points",
     },
     {
       label: "Максимальная цель",
       value: metrics.maxTargetValue,
       note: "Наибольшее пороговое значение",
+      icon: "flagged",
     },
   ];
 

@@ -70,6 +70,7 @@ export const mockActivities: AdminActivity[] = [
     co2Saved: 1.5,
     points: 20,
     note: "Университет вместо такси",
+    media: [],
     createdAt: "2026-03-29T08:30:00Z",
   },
   {
@@ -82,6 +83,7 @@ export const mockActivities: AdminActivity[] = [
     co2Saved: 0,
     points: 15,
     note: "Сократила душ до 5 минут",
+    media: [],
     createdAt: "2026-03-29T09:10:00Z",
   },
   {
@@ -94,6 +96,7 @@ export const mockActivities: AdminActivity[] = [
     co2Saved: 0,
     points: 10,
     note: "Раздельный сбор дома",
+    media: [],
     createdAt: "2026-03-28T14:00:00Z",
   },
 ];
@@ -301,6 +304,7 @@ export const mockPosts: CommunityPost[] = [
     visibility: "PUBLIC",
     state: "Flagged",
     reportsCount: 3,
+    media: [],
     createdAt: "2025-03-14",
   },
   {
@@ -310,6 +314,7 @@ export const mockPosts: CommunityPost[] = [
     visibility: "FOLLOWERS",
     state: "Published",
     reportsCount: 0,
+    media: [],
     createdAt: "2025-03-15",
   },
   {
@@ -319,6 +324,7 @@ export const mockPosts: CommunityPost[] = [
     visibility: "PUBLIC",
     state: "Needs review",
     reportsCount: 2,
+    media: [],
     createdAt: "2025-03-16",
   },
   {
@@ -328,6 +334,7 @@ export const mockPosts: CommunityPost[] = [
     visibility: "PUBLIC",
     state: "Hidden",
     reportsCount: 1,
+    media: [],
     createdAt: "2025-03-13",
   },
 ];

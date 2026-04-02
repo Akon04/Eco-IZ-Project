@@ -20,7 +20,7 @@ export default async function ActivitiesPage() {
     <>
       <PageHeader
         title="Активности"
-        description="Просмотр действий пользователей, eco-эффекта и custom note по всей платформе."
+        description="Просмотр действий пользователей, эко-эффекта и заметок по всей платформе."
       />
       <ActivitiesWorkspace initialActivities={activities} metrics={metrics} />
     </>

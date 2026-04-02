@@ -15,6 +15,12 @@ export type AdminUser = {
   status: UserStatus;
 };
 
+export type AdminMedia = {
+  id: string;
+  kind: string;
+  base64Data: string;
+};
+
 export type AdminUserActivity = {
   id: string;
   category: string;
@@ -88,6 +94,7 @@ export type AdminActivity = {
   co2Saved: number;
   points: number;
   note: string;
+  media: AdminMedia[];
   createdAt: string;
 };
 
@@ -192,6 +199,7 @@ export type CommunityPost = {
   visibility: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
   state: "Published" | "Flagged" | "Needs review" | "Hidden";
   reportsCount: number;
+  media: AdminMedia[];
   createdAt: string;
 };
 
@@ -210,6 +218,7 @@ export type UpdatePostPayload = {
 export type PostMetrics = {
   totalPosts: number;
   flaggedPosts: number;
+  needsReviewPosts: number;
   hiddenPosts: number;
   totalReports: number;
 };

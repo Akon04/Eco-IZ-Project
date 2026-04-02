@@ -1,4 +1,5 @@
 import type { AdminUser, UserFilters, UserRole, UserStatus } from "@/lib/types";
+import { userRoleBadgeClass, userStatusBadgeClass } from "@/lib/status-badges";
 
 type UserTableProps = {
   users: AdminUser[];
@@ -58,7 +59,7 @@ export function UserTable({
               onChange={(event) =>
                 onFilterChange({ ...filters, search: event.target.value })
               }
-              placeholder="Поиск по username или email"
+              placeholder="Поиск по имени пользователя или email"
             />
           </label>
           <div className="filters-row">
@@ -124,10 +125,12 @@ export function UserTable({
                 <td>{user.username}</td>
                 <td>{user.email}</td>
                 <td>
-                  <span className="pill">{roleLabels[user.role]}</span>
+                  <span className={userRoleBadgeClass(user.role)}>{roleLabels[user.role]}</span>
                 </td>
                 <td>
-                  <span className="pill">{statusLabels[user.status]}</span>
+                  <span className={userStatusBadgeClass(user.status)}>
+                    {statusLabels[user.status]}
+                  </span>
                 </td>
                 <td>{user.ecoPoints}</td>
                 <td>{formatDate(user.createdAt)}</td>

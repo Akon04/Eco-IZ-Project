@@ -56,6 +56,7 @@ export async function getPostMetrics(): Promise<PostMetrics> {
   return {
     totalPosts: mockPosts.length,
     flaggedPosts: mockPosts.filter((post) => post.state === "Flagged").length,
+    needsReviewPosts: mockPosts.filter((post) => post.state === "Needs review").length,
     hiddenPosts: mockPosts.filter((post) => post.state === "Hidden").length,
     totalReports: mockPosts.reduce((sum, post) => sum + post.reportsCount, 0),
   };

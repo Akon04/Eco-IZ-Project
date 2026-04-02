@@ -10,6 +10,7 @@ import { isMockMode } from "@/lib/config";
 import { getHabitMetrics } from "@/lib/api/habits";
 import { getPostMetrics, listPosts } from "@/lib/api/posts";
 import { queryKeys } from "@/lib/query-keys";
+import { postStateBadgeClass } from "@/lib/status-badges";
 import { getAdminUserMetrics, listAdminUsers } from "@/lib/api/users";
 import type {
   Achievement,
@@ -206,6 +207,7 @@ export function DashboardWorkspace({
     .map((post) => ({
       label: `Пост от ${post.author}`,
       status: postStateLabels[post.state],
+      statusClass: postStateBadgeClass(post.state),
       owner: "Модератор",
     }));
 
@@ -213,16 +215,19 @@ export function DashboardWorkspace({
     {
       label: "Пользователи на проверке",
       status: `${userMetrics.needsReview} ожидают`,
+      statusClass: "pill pill-status pill-status-review",
       owner: "Админ",
     },
     {
       label: "Состояние категорий",
       status: `${categoryMetrics.totalCategories} активно`,
+      statusClass: "pill pill-status pill-status-active",
       owner: "Контент",
     },
     {
       label: "Состояние ачивок",
       status: `${achievements.length} настроено`,
+      statusClass: "pill pill-status pill-status-published",
       owner: "Продукт",
     },
   ];
@@ -255,7 +260,7 @@ export function DashboardWorkspace({
                   <tr key={`${item.label}-${item.status}`}>
                     <td>{item.label}</td>
                     <td>
-                      <span className="pill">{item.status}</span>
+                      <span className={item.statusClass}>{item.status}</span>
                     </td>
                     <td>{item.owner}</td>
                   </tr>

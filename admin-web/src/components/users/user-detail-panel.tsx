@@ -15,6 +15,7 @@ import {
   verifyAdminUserEmail,
 } from "@/lib/api/users";
 import { queryKeys } from "@/lib/query-keys";
+import { userRoleBadgeClass, userStatusBadgeClass } from "@/lib/status-badges";
 import type { AdminUser, AdminUserDetail, UpdateAdminUserPayload } from "@/lib/types";
 import { userFormSchema, type UserFormValues } from "@/lib/validation";
 
@@ -226,11 +227,15 @@ export function UserDetailPanel({ user }: UserDetailPanelProps) {
         </div>
         <div className="detail-row">
           <span className="muted">Текущая роль</span>
-          <strong>{roleLabels[displayUser.role]}</strong>
+          <span className={userRoleBadgeClass(displayUser.role)}>
+            {roleLabels[displayUser.role]}
+          </span>
         </div>
         <div className="detail-row">
           <span className="muted">Статус</span>
-          <strong>{statusLabels[displayUser.status]}</strong>
+          <span className={userStatusBadgeClass(displayUser.status)}>
+            {statusLabels[displayUser.status]}
+          </span>
         </div>
         <div className="detail-row">
           <span className="muted">Eco баллы</span>

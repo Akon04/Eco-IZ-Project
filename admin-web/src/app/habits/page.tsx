@@ -19,7 +19,7 @@ export default async function HabitsPage() {
     <>
       <PageHeader
         title="Каталог активностей"
-        description="Просмотр фиксированного каталога активностей, баллов и eco-показателей."
+        description="Просмотр фиксированного каталога активностей, баллов и эко-показателей."
       />
       <HabitsWorkspace initialHabits={habits} metrics={metrics} />
     </>

@@ -1,4 +1,5 @@
 import type { CommunityPost, PostFilters } from "@/lib/types";
+import { postStateBadgeClass } from "@/lib/status-badges";
 
 type PostTableProps = {
   posts: CommunityPost[];
@@ -133,7 +134,9 @@ export function PostTable({
                 <td>{post.author}</td>
                 <td>{visibilityLabels[post.visibility]}</td>
                 <td>
-                  <span className="pill">{stateLabels[post.state]}</span>
+                  <span className={postStateBadgeClass(post.state)}>
+                    {stateLabels[post.state]}
+                  </span>
                 </td>
                 <td>{post.reportsCount}</td>
                 <td>{formatDate(post.createdAt)}</td>

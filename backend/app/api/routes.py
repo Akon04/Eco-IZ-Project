@@ -14,6 +14,7 @@ from app.models.chat import ChatMessage
 from app.models.post import Post, PostMedia
 from app.models.user import Activity, ActivityMedia, User
 from app.schemas.admin import (
+    AdminMediaResponse,
     AchievementMetricsResponse,
     AchievementResponse,
     AdminActivityMetrics,
@@ -162,6 +163,7 @@ def serialize_admin_user_detail(user: User) -> AdminUserDetailResponse:
                 username=user.username,
                 userEmail=user.email,
                 note=item.note or "",
+                media=[AdminMediaResponse(**media.model_dump()) for media in serialize_activity(item).media],
             )
             for item in recent_activities
         ],
@@ -191,6 +193,7 @@ def serialize_admin_activity(activity: Activity) -> AdminUserActivityResponse:
         username=activity.user.username,
         userEmail=activity.user.email,
         note=activity.note or "",
+        media=[AdminMediaResponse(**media.model_dump()) for media in serialize_activity(activity).media],
     )
 
 
@@ -235,6 +238,7 @@ def serialize_admin_post(post: Post) -> CommunityPostResponse:
         visibility=post.visibility,
         state=post.moderation_state,
         reportsCount=post.reports_count,
+        media=[AdminMediaResponse(**media.model_dump()) for media in serialize_post(post).media],
         createdAt=post.created_at,
     )
 
@@ -527,7 +531,7 @@ def admin_user_detail(
     user = db.scalar(
         select(User)
         .options(
-            selectinload(User.activities),
+            selectinload(User.activities).selectinload(Activity.media),
             selectinload(User.posts).selectinload(Post.media),
             selectinload(User.user_challenges).selectinload(UserChallenge.challenge),
         )
@@ -607,7 +611,11 @@ def admin_activities(
     _: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ) -> list[AdminUserActivityResponse]:
-    stmt = select(Activity).options(selectinload(Activity.user)).order_by(Activity.created_at.desc())
+    stmt = (
+        select(Activity)
+        .options(selectinload(Activity.user), selectinload(Activity.media))
+        .order_by(Activity.created_at.desc())
+    )
     if category:
         stmt = stmt.where(Activity.category.ilike(category.strip()))
     if search:
@@ -907,7 +915,7 @@ def admin_posts(
     _: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ) -> list[CommunityPostResponse]:
-    stmt = select(Post).order_by(Post.created_at.desc())
+    stmt = select(Post).options(selectinload(Post.media)).order_by(Post.created_at.desc())
     if search:
         pattern = f"%{search.strip()}%"
         stmt = stmt.where((Post.author_name.ilike(pattern)) | (Post.text.ilike(pattern)))
@@ -924,6 +932,7 @@ def admin_post_metrics(_: User = Depends(get_current_admin), db: Session = Depen
     return PostMetricsResponse(
         totalPosts=len(posts),
         flaggedPosts=sum(1 for item in posts if item.moderation_state == "Flagged"),
+        needsReviewPosts=sum(1 for item in posts if item.moderation_state == "Needs review"),
         hiddenPosts=sum(1 for item in posts if item.moderation_state == "Hidden"),
         totalReports=sum(item.reports_count for item in posts),
     )

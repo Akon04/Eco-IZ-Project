@@ -19,7 +19,7 @@ export default async function CategoriesPage() {
     <>
       <PageHeader
         title="Категории"
-        description="Поддержка системных eco-категорий, которые используются в каталоге и аналитике."
+        description="Поддержка системных эко-категорий, которые используются в каталоге и аналитике."
       />
       <CategoriesWorkspace initialCategories={categories} metrics={metrics} />
     </>

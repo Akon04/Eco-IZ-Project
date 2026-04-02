@@ -112,6 +112,10 @@ textarea {
 .sidebar-user {
   display: grid;
   gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
 }
 
 .sidebar-button {
@@ -119,12 +123,33 @@ textarea {
 }
 
 .nav-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 12px 14px;
   border: 1px solid transparent;
   border-radius: 14px;
   color: var(--muted);
+  font-weight: 600;
   transition: 0.2s ease;
+}
+
+.nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(231, 245, 226, 0.95);
+  border: 1px solid rgba(81, 193, 27, 0.22);
+  color: #2f7d1c;
+  flex: 0 0 auto;
+}
+
+.nav-icon-svg {
+  width: 20px;
+  height: 20px;
 }
 
 .nav-link:hover,
@@ -132,6 +157,63 @@ textarea {
   background: var(--accent-soft);
   border-color: rgba(81, 193, 27, 0.2);
   color: var(--text);
+}
+
+.nav-link.active .nav-icon {
+  background: linear-gradient(135deg, #8fee5a 0%, var(--accent) 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 10px 24px rgba(81, 193, 27, 0.2);
+}
+
+.metric-icon-users {
+  background: #dff4ff;
+  color: #2f7bd6;
+}
+
+.metric-icon-staff {
+  background: #efe7ff;
+  color: #7f56d9;
+}
+
+.metric-icon-verified {
+  background: #dff7e5;
+  color: #26995a;
+}
+
+.metric-icon-activities {
+  background: #ffe9d7;
+  color: #d77720;
+}
+
+.metric-icon-points {
+  background: #fff0d6;
+  color: #d18812;
+}
+
+.metric-icon-co2 {
+  background: #dbf5ea;
+  color: #2c9660;
+}
+
+.metric-icon-categories {
+  background: #e5f0ff;
+  color: #3c79d4;
+}
+
+.metric-icon-colors {
+  background: #ffe4f0;
+  color: #d25193;
+}
+
+.metric-icon-habits {
+  background: #e6f8e6;
+  color: #369b4d;
+}
+
+.metric-icon-achievements {
+  background: #fff3cd;
+  color: #d39a08;
 }
 
 .content {
@@ -200,10 +282,11 @@ textarea {
   display: inline-flex;
   align-items: center;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 999px;
   padding: 8px 12px;
   color: var(--muted);
+  box-shadow: 0 8px 18px rgba(33, 83, 29, 0.05);
 }
 
 .grid {
@@ -219,6 +302,10 @@ textarea {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.grid.grid-five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .card {
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid var(--border);
@@ -227,15 +314,93 @@ textarea {
   box-shadow: 0 18px 42px rgba(77, 146, 44, 0.07);
 }
 
+.metric-card {
+  min-height: 224px;
+  display: flex;
+  flex-direction: column;
+}
+
 .inset-card {
   background: var(--surface);
   box-shadow: none;
+}
+
+.media-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.evidence-tile {
+  display: block;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.92);
+  min-height: 150px;
+}
+
+.evidence-tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 150px;
+  object-fit: cover;
 }
 
 .card h2,
 .card h3,
 .card p {
   margin-top: 0;
+}
+
+.metric-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.metric-icon-svg {
+  width: 22px;
+  height: 22px;
+}
+
+.metric-icon-posts {
+  background: #e4f1ff;
+  color: #3078d8;
+}
+
+.metric-icon-flagged {
+  background: #fff1d8;
+  color: #d88711;
+}
+
+.metric-icon-review {
+  background: #efe4ff;
+  color: #8a5de8;
+}
+
+.metric-icon-hidden {
+  background: #dff5e6;
+  color: #2e9d5f;
+}
+
+.metric-icon-reports {
+  background: #ffe2e2;
+  color: #d15656;
 }
 
 .state-panel {
@@ -265,6 +430,18 @@ textarea {
   margin: 8px 0;
 }
 
+.metric-card .metric {
+  margin: 10px 0 12px;
+  font-size: clamp(40px, 4vw, 52px);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.metric-card .muted:last-child {
+  max-width: 23ch;
+  line-height: 1.35;
+}
+
 .muted {
   color: var(--muted);
 }
@@ -292,6 +469,7 @@ th {
 
 tbody tr {
   transition: background 0.15s ease;
+  cursor: pointer;
 }
 
 tbody tr:hover {
@@ -309,6 +487,62 @@ tbody tr:hover {
   background: var(--surface-alt);
   color: var(--text);
   font-size: 14px;
+}
+
+.pill-status {
+  padding: 8px 14px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.pill-role {
+  padding: 8px 14px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.pill-role-admin {
+  background: #efe4ff;
+  color: #7b4fe3;
+  border-color: #dbc8ff;
+}
+
+.pill-role-moderator {
+  background: #fff0d6;
+  color: #d18812;
+  border-color: #ffe0ad;
+}
+
+.pill-role-user {
+  background: #e4f1ff;
+  color: #3078d8;
+  border-color: #c9e0ff;
+}
+
+.pill-status-active,
+.pill-status-published,
+.pill-status-hidden {
+  background: #dff7e5;
+  color: #24965a;
+  border-color: #bfeccc;
+}
+
+.pill-status-flagged {
+  background: #fff0d6;
+  color: #d18812;
+  border-color: #ffe0ad;
+}
+
+.pill-status-review {
+  background: #efe4ff;
+  color: #8a5de8;
+  border-color: #dcc8ff;
+}
+
+.pill-status-suspended {
+  background: #ffe2e2;
+  color: #d15656;
+  border-color: #ffc2c2;
 }
 
 .section-title {
@@ -441,6 +675,42 @@ tbody tr:hover {
   background: rgba(255, 255, 255, 0.96);
 }
 
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 48px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.password-toggle:hover {
+  background: rgba(81, 193, 27, 0.1);
+  color: var(--accent-strong);
+}
+
+.password-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;
@@ -470,6 +740,7 @@ tbody tr:hover {
 .action-group-title {
   margin: 0;
   font-size: 14px;
+  letter-spacing: 0.01em;
 }
 
 .action-grid {
@@ -496,6 +767,7 @@ tbody tr:hover {
   border: 1px solid var(--border);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .challenge-card-complete {
@@ -547,6 +819,12 @@ tbody tr:hover {
   border-color: rgba(199, 75, 75, 0.22);
   color: var(--danger);
   background: rgba(255, 248, 248, 0.92);
+}
+
+.sidebar-button.danger-button {
+  border-color: rgba(199, 75, 75, 0.3);
+  background: linear-gradient(135deg, rgba(255, 238, 238, 0.98), rgba(255, 246, 246, 0.95));
+  color: var(--danger);
 }
 
 .primary-button:hover,
@@ -611,23 +889,62 @@ tbody tr:hover {
 }
 
 .habit-row-transport {
-  background: rgba(255, 231, 203, 0.62);
+  background: rgba(255, 184, 77, 0.13);
 }
 
 .habit-row-water {
-  background: rgba(217, 240, 255, 0.62);
+  background: rgba(87, 184, 255, 0.13);
 }
 
 .habit-row-waste {
-  background: rgba(223, 247, 229, 0.72);
+  background: rgba(126, 227, 93, 0.14);
 }
 
 .habit-row-plastic {
-  background: rgba(229, 245, 255, 0.78);
+  background: rgba(68, 224, 208, 0.14);
 }
 
 .habit-row-energy {
-  background: rgba(255, 246, 204, 0.76);
+  background: rgba(255, 216, 77, 0.16);
+}
+
+.category-color-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.category-color-transport {
+  background: rgba(255, 184, 77, 0.16);
+  color: #d88918;
+  border-color: rgba(255, 184, 77, 0.3);
+}
+
+.category-color-water {
+  background: rgba(87, 184, 255, 0.16);
+  color: #2489df;
+  border-color: rgba(87, 184, 255, 0.3);
+}
+
+.category-color-plastic {
+  background: rgba(68, 224, 208, 0.16);
+  color: #18a99d;
+  border-color: rgba(68, 224, 208, 0.3);
+}
+
+.category-color-waste {
+  background: rgba(126, 227, 93, 0.16);
+  color: #52a93b;
+  border-color: rgba(126, 227, 93, 0.3);
+}
+
+.category-color-energy {
+  background: rgba(255, 216, 77, 0.18);
+  color: #c99a08;
+  border-color: rgba(255, 216, 77, 0.3);
 }
 
 .sr-only {
@@ -662,6 +979,7 @@ tbody tr:hover {
 
   .grid.cards,
   .grid.grid-three,
+  .grid.grid-five,
   .split {
     grid-template-columns: 1fr;
   }

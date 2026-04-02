@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useAuth } from "@/components/auth-provider";
@@ -11,6 +12,7 @@ import { loginSchema, type LoginFormValues } from "@/lib/validation";
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
   const mockMode = isMockMode();
   const defaultCredentials = mockMode
     ? {
@@ -51,7 +53,7 @@ export default function LoginPage() {
         <p className="muted">
           {mockMode
             ? "Тестовые данные уже подставлены для проверки интерфейса."
-            : "Включен live-режим backend. Используй seeded admin-аккаунт для входа."}
+            : "Включен live-режим backend. Используй готовые аккаунты администратора или модератора."}
         </p>
 
         <form className="form-shell" onSubmit={handleSubmit(onSubmit)}>
@@ -65,7 +67,30 @@ export default function LoginPage() {
 
           <label className="field">
             <span>Пароль</span>
-            <input type="password" {...register("password")} />
+            <div className="password-field">
+              <input
+                type={showPassword ? "text" : "password"}
+                {...register("password")}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
+                onClick={() => setShowPassword((value) => !value)}
+              >
+                {showPassword ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3.5 12s3-5 8.5-5 8.5 5 8.5 5-3 5-8.5 5-8.5-5-8.5-5Z" />
+                    <path d="M9 15 15 9" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12Z" />
+                    <circle cx="12" cy="12" r="2.5" />
+                  </svg>
+                )}
+              </button>
+            </div>
             {errors.password ? (
               <p className="field-error">{errors.password.message}</p>
             ) : null}
@@ -80,7 +105,7 @@ export default function LoginPage() {
               ? "Есть несохраненные изменения в форме входа."
               : mockMode
                 ? "Тестовые данные готовы."
-                : "Данные live-админа готовы."}
+                : "Данные live-аккаунта готовы."}
           </p>
 
           <div className="button-row">
@@ -102,7 +127,7 @@ export default function LoginPage() {
         </form>
 
         <div className="auth-hint">
-          <strong>{mockMode ? "Тестовые аккаунты" : "Аккаунт live-backend"}</strong>
+          <strong>{mockMode ? "Тестовые аккаунты" : "Аккаунты live-backend"}</strong>
           {mockMode ? (
             <>
               <p className="muted">`akmaral@ecoiz.app / admin123`</p>
