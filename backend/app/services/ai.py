@@ -22,18 +22,23 @@ DEFAULT_SYSTEM_PROMPT = """
 - оставайся вдохновляющим, но не навязчивым;
 - можно добавить 0-2 уместных эмодзи;
 - допустим лёгкий экологичный юмор без сарказма и давления.
+- звучишь как тёплый eco-friend, а не как бот поддержки.
 
 Правила ответа:
 - обычно отвечай в 1-5 коротких предложениях;
 - если даёшь совет, предлагай 1-3 конкретных и применимых шага;
 - если пользователь уже сделал полезное действие, сначала похвали его;
 - если пользователь устал, сомневается или пассивен, предложи микро-действие;
+- даже если пользователь пишет очень коротко, отвечай живо и естественно, не канцелярски;
 - по возможности кратко объясняй эффект: меньше отходов, экономия воды/энергии, меньше CO2;
 - учитывай историю действий, серию, очки и релевантные категории, но не пересказывай сырые данные без пользы;
 - если пользователь меняет условия, сразу подстрой ответ под новый контекст.
 - сначала отвечай на настоящий вопрос пользователя, а не на воображаемый eco-шаблон;
-- если вопрос не про экологию напрямую, всё равно отвечай нормально и по-человечески, без попытки насильно свести всё к экопривычкам;
-- если уместно, мягко добавь eco-friendly угол или следующий экологичный шаг, но только когда это реально подходит ситуации;
+- можно свободно отвечать почти на любые обычные вопросы, если они безопасны и не противоречат роли ассистента;
+- даже когда тема не про экологию напрямую, адаптируй ответ в более eco-friendly сторону естественно и без занудства;
+- если пользователь шутит, можно отвечать с лёгким eco-юмором;
+- если пользователь спрашивает про отдых, фильм, поездку или повседневные планы, можно предложить более экологичный вариант или связать это с одной лёгкой активностью;
+- по возможности мягко поддерживай мотивацию и чувство прогресса;
 - small talk, приветствия, эмоции и обычный разговор тоже обрабатывай естественно;
 - никогда не показывай внутренние рассуждения, план решения, скрытый разбор запроса или служебные заметки;
 - не пиши фразы вроде "пользователь говорит", "нужно подстроить", "сначала посмотрю", "значит нужно";
@@ -43,6 +48,7 @@ DEFAULT_SYSTEM_PROMPT = """
 - осуждать пользователя;
 - guilt-trip, давить или читать лекцию;
 - выдумывать факты и точные цифры, если нет опоры на контекст;
+- развивать 18+ темы;
 - звучать как шаблонная техподдержка.
 
 Предпочтительный тон:
@@ -55,7 +61,13 @@ DEFAULT_SYSTEM_PROMPT = """
 def _fallback_response(text: str) -> str:
     lowercase = text.lower()
     if _is_greeting_or_smalltalk(text):
-        return "Привет. Могу помочь с идеями на день, экопривычками или просто нормально ответить на вопрос без шаблонов."
+        return "Привет 🌱 Я на связи. Могу просто поболтать, подсказать идею на день или помочь подобрать что-то с eco-friendly уклоном."
+    if any(word in lowercase for word in ("шут", "анекдот", "смешн", "юмор")):
+        return "Лови eco-шутку: пакет хотел вернуться в магазин, но шоппер уже занял его место. Если хочешь, потом подкину ещё и маленькую активность на сегодня для настроения 🌿"
+    if "фильм" in lowercase or "сериал" in lowercase:
+        return "Если хочется фильм на вечер, можно взять что-то с природной или экологичной темой, например документалку про океан, климат или устойчивую жизнь. А чтобы и стрик не скучал, можно во время просмотра взять многоразовую кружку и отметить одну маленькую eco-активность."
+    if any(word in lowercase for word in ("турци", "поездк", "путешеств", "в отпуске", "в отпуск")):
+        return "Да, даже в поездке можно держать eco-ритм. Самое простое: своя бутылка, меньше одноразового и пешие маршруты там, где это удобно. Этого уже хватит, чтобы привычка не потерялась."
     if "что делать сегодня" in lowercase or "что мне делать сегодня" in lowercase:
         return "На сегодня можно выбрать что-то одно: короткий душ, многоразовую бутылку с собой или выключить лишний свет дома. Этого уже достаточно."
     if "вод" in lowercase:
@@ -68,8 +80,8 @@ def _fallback_response(text: str) -> str:
         walk_actions = _outdoor_actions()
         return f"Тогда лучше оттолкнуться от прогулки: можно пройти часть пути пешком подольше, взять с собой {walk_actions[1]} и не брать по дороге одноразовый стакан или бутылку."
     if any(word in lowercase for word in ("как", "почему", "зачем", "что")):
-        return "Если коротко, могу помочь практично. Напиши чуть конкретнее, что именно хочешь понять или сделать, и я подстроюсь под ситуацию."
-    return "Могу ответить более точно, если напишешь чуть подробнее, что именно тебе сейчас нужно."
+        return "Могу ответить нормально и по-человечески. Если хочешь, подстрою совет или идею под твою ситуацию и заодно добавлю лёгкий eco-friendly угол без перегруза."
+    return "Могу ответить по-человечески и без шаблонов. Если захочешь, ещё и подстрою ответ под твой день, настроение или одну маленькую eco-активность."
 
 
 def _contains_any(text: str, *phrases: str) -> bool:
@@ -104,6 +116,23 @@ def _is_smalltalk_request(text: str) -> bool:
         "спокойной ночи",
     )
     return any(phrase in normalized for phrase in smalltalk_phrases)
+
+
+def _is_affirmation(text: str) -> bool:
+    normalized = " ".join(_normalized_user_text(text).split())
+    affirmations = (
+        "да",
+        "ага",
+        "угу",
+        "ок",
+        "окей",
+        "хмм кажется да",
+        "кажется да",
+        "думаю да",
+        "наверно да",
+        "наверное да",
+    )
+    return normalized in affirmations
 
 
 def _home_actions_for_category(category: str) -> list[str]:
@@ -331,7 +360,7 @@ def _analytics_snapshot(user: User) -> dict[str, object]:
     strongest = max(category_counts, key=category_counts.get) if category_counts else None
     weakest = min(category_counts, key=category_counts.get) if category_counts else None
 
-    preferred_order = ["Энергия", "Вода", "Пластик", "Отходы", "Транспорт", "Своя активность"]
+    preferred_order = ["Энергия", "Вода", "Пластик", "Отходы", "Транспорт"]
     missing = [category for category in preferred_order if category not in category_counts]
     if missing:
         suggested = missing[0]
@@ -426,6 +455,12 @@ def _last_activity_line(snapshot: dict[str, object]) -> str:
     return f"Последнее действие у тебя было в категории «{last_activity.category}»: {last_activity.title.lower()}."
 
 
+def _display_category(category: str | None) -> str:
+    if not category or category == "Своя активность":
+        return "экопривычки"
+    return category
+
+
 def _actions_for_context(category: str, topic: str | None) -> list[str]:
     if topic == "work":
         return _work_actions_for_category(category)
@@ -443,8 +478,12 @@ def _infer_user_intent(text: str) -> str:
     lowercase = text.lower()
     if _is_activity_sharing_message(lowercase):
         return "praise"
+    if _is_affirmation(text):
+        return "affirmation"
     if _is_smalltalk_request(text):
         return "smalltalk"
+    if any(phrase in lowercase for phrase in ("сохранить стрик", "сохранить серию", "не потерять стрик", "не сбить стрик", "не сбить серию", "как сохранить стрик", "как сохранить серию")):
+        return "streak"
     if any(phrase in lowercase for phrase in ("что такое co2", "что такое co₂", "что значит co2", "что значит co₂")):
         return "explain"
     if any(phrase in lowercase for phrase in ("мой вклад", "мой прогресс", "как у меня дела", "что у меня по вкладу", "мой результат")):
@@ -481,11 +520,24 @@ def _personalized_fallback_response(text: str, user: User) -> str:
     raw_topic = _context_topic(user, text)
     topic = _effective_topic(user, text)
     seed = f"{text}:{user.points}:{user.streak_days}"
-    message_category = _message_category(text, suggested_category)
+    direct_message_category = _message_category(text, None)
+    message_category = direct_message_category or suggested_category
     streak_line = _streak_line(user)
     intent = _infer_user_intent(text)
     focus_category = message_category or suggested_category
     actions = _actions_for_context(focus_category, topic)
+    display_category = _display_category(focus_category)
+    has_direct_eco_signal = direct_message_category is not None or raw_topic in {
+        "outdoor",
+        "work",
+        "home",
+        "water",
+        "energy",
+        "plastic",
+        "waste",
+        "transport",
+        "tomorrow",
+    } or any(word in lowercase for word in ("co2", "co₂", "эк", "стрик", "активност", "привыч"))
     context_lead = {
         "work": "Если говорить именно про то, что можно сделать на работе,",
         "outdoor": "Если отталкиваться от твоего маршрута или прогулки,",
@@ -501,6 +553,12 @@ def _personalized_fallback_response(text: str, user: User) -> str:
             f"{_pick_variant(seed, ['У меня всё спокойно, спасибо. Если захочешь, можем поболтать или придумать лёгкий eco-шаг на сегодня.', 'Всё хорошо. Если хочешь, могу просто поболтать или помочь с экологичной идеей без перегруза.', 'Всё ок. Могу и просто пообщаться, и помочь с eco-советом, если понадобится.'])}"
         )
 
+    if intent == "affirmation":
+        return (
+            f"{_pick_variant(seed, ['Супер, тогда это уже хороший шаг.', 'Отлично, этого уже достаточно на сегодня.', 'Класс, значит серия держится.'])} "
+            f"{_pick_variant(seed, ['Если захочешь, потом подкину ещё один такой же лёгкий вариант.', 'Не перегружай себя: одного такого действия уже хватает.', 'Маленький шаг тоже работает, так что ты уже в деле 🌱'])}"
+        )
+
     if intent == "praise":
         response_parts = [
             _praise_for_action(text, user, focus_category),
@@ -512,8 +570,15 @@ def _personalized_fallback_response(text: str, user: User) -> str:
     if intent == "progress":
         return (
             f"Сейчас у тебя {user.points} очков, серия {user.streak_days} дн. и примерно {user.co2_saved_total:.1f} кг CO₂ экономии. "
-            f"{strongest_line} {weakest_line} Если хочешь, я подберу следующий экологичный шаг без перегруза."
+            f"Это уже хороший вклад. Если хочешь, я подберу следующий лёгкий eco-шаг под твой день."
         ).strip()
+
+    if intent == "streak":
+        return (
+            f"Чтобы сохранить стрик, не нужно делать что-то большое. "
+            f"Достаточно одного простого eco-действия сегодня: {actions[0]}. "
+            f"Если хочешь, могу сразу предложить ещё 2 коротких варианта под твой день."
+        )
 
     if intent == "explain":
         return (
@@ -525,8 +590,7 @@ def _personalized_fallback_response(text: str, user: User) -> str:
     if intent == "analysis":
         return (
             f"Если коротко по твоим активностям, за последние 7 дней у тебя уже {recent_points} очков. "
-            f"{strongest_line} {weakest_line} {last_activity_line} "
-            f"Логичнее всего сейчас дать чуть больше внимания категории «{focus_category}»."
+            f"{last_activity_line} Сейчас полезнее всего просто выбрать один небольшой следующий шаг и не перегружать себя."
         ).strip()
 
     if intent == "motivation":
@@ -536,8 +600,11 @@ def _personalized_fallback_response(text: str, user: User) -> str:
             f"{_pick_variant(seed, ['Этого уже достаточно, чтобы не выпадать из ритма.', 'Один спокойный шаг тоже считается вкладом.', 'Лучше маленький реальный шаг, чем большой план без сил.'])}"
         )
 
+    if intent == "advice" and not has_direct_eco_signal:
+        return _fallback_response(text)
+
     return (
-        f"{context_lead} логичнее всего сейчас сфокусироваться на категории «{focus_category}». "
+        f"{context_lead} можно выбрать что-то совсем простое. "
         f"Например: {actions[0]}, {actions[1]} или {actions[2]}. "
         f"{_category_impact_hint(focus_category).capitalize()}. {_supportive_close(seed)}"
     ).strip()

@@ -284,6 +284,71 @@ class BackendAPITests(unittest.TestCase):
         self.assertNotIn("weakestcategory", assistant_text)
         self.assertNotIn("последние активности:", assistant_text)
 
+    def test_chat_answers_streak_question_with_concrete_next_step(self) -> None:
+        login = self.client.post(
+            "/auth/login",
+            json={"email": "user@ecoiz.app", "password": "password123"},
+        )
+        self.assertEqual(login.status_code, 200)
+        token = login.json()["token"]
+
+        chat = self.client.post(
+            "/chat/messages",
+            json={"text": "А как сохранить стрик?"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(chat.status_code, 201)
+        assistant_text = chat.json()["messages"][1]["text"].lower()
+        self.assertIn("сохранить стрик", assistant_text)
+        self.assertTrue(any(word in assistant_text for word in ("достаточно", "сегодня", "варианта", "действия")))
+        self.assertNotIn("по сути: сейчас логичнее", assistant_text)
+        self.assertNotIn("своя активность", assistant_text)
+
+    def test_chat_handles_short_affirmation_without_falling_into_template(self) -> None:
+        login = self.client.post(
+            "/auth/login",
+            json={"email": "user@ecoiz.app", "password": "password123"},
+        )
+        self.assertEqual(login.status_code, 200)
+        token = login.json()["token"]
+
+        first = self.client.post(
+            "/chat/messages",
+            json={"text": "А как сохранить стрик?"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(first.status_code, 201)
+
+        second = self.client.post(
+            "/chat/messages",
+            json={"text": "Хмм кажется да"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(second.status_code, 201)
+        assistant_text = second.json()["messages"][1]["text"].lower()
+        self.assertTrue(any(word in assistant_text for word in ("супер", "отлично", "класс", "шаг", "серия")))
+        self.assertNotIn("логичнее всего", assistant_text)
+        self.assertNotIn("своя активность", assistant_text)
+
+    def test_chat_can_answer_broad_safe_question_without_forcing_eco_redirect(self) -> None:
+        login = self.client.post(
+            "/auth/login",
+            json={"email": "user@ecoiz.app", "password": "password123"},
+        )
+        self.assertEqual(login.status_code, 200)
+        token = login.json()["token"]
+
+        chat = self.client.post(
+            "/chat/messages",
+            json={"text": "Какой фильм посмотреть вечером?"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(chat.status_code, 201)
+        assistant_text = chat.json()["messages"][1]["text"].lower()
+        self.assertTrue(any(word in assistant_text for word in ("фильм", "документал", "океан", "климат", "природ")))
+        self.assertTrue(any(word in assistant_text for word in ("eco", "актив", "стрик", "многоразов")))
+        self.assertNotIn("своя активность", assistant_text)
+
     def test_error_responses(self) -> None:
         unauthorized = self.client.get(
             "/bootstrap",
