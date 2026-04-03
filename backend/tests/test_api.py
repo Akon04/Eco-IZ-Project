@@ -161,6 +161,25 @@ class BackendAPITests(unittest.TestCase):
         self.assertIn("завтра", second_text)
         self.assertTrue(any(word in second_text for word in ("пеш", "бутыл", "ритм")))
 
+    def test_chat_praises_completed_action_and_suggests_next_step(self) -> None:
+        login = self.client.post(
+            "/auth/login",
+            json={"email": "user@ecoiz.app", "password": "password123"},
+        )
+        self.assertEqual(login.status_code, 200)
+        token = login.json()["token"]
+
+        chat = self.client.post(
+            "/chat/messages",
+            json={"text": "Я сегодня поехал на автобусе вместо машины"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(chat.status_code, 201)
+        assistant_text = chat.json()["messages"][1]["text"].lower()
+        self.assertTrue(any(phrase in assistant_text for phrase in ("отличный выбор", "классный шаг", "хороший eco-ход")))
+        self.assertTrue(any(word in assistant_text for word in ("co2", "выброс", "транспорт")))
+        self.assertTrue(any(word in assistant_text for word in ("следующим шагом", "если хочешь", "можно")))
+
     def test_error_responses(self) -> None:
         unauthorized = self.client.get(
             "/bootstrap",
