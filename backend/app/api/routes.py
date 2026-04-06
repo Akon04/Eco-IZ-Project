@@ -14,10 +14,14 @@ from app.models.chat import ChatMessage
 from app.models.post import Post, PostMedia
 from app.models.user import Activity, ActivityMedia, User
 from app.schemas.admin import (
+    AdminActivityDetailResponse,
     AdminMediaResponse,
     AchievementMetricsResponse,
     AchievementResponse,
     AdminActivityMetrics,
+    EcoAnalyticsCategoryResponse,
+    EcoAnalyticsResponse,
+    EcoAnalyticsTopUserResponse,
     AdminIdentityResponse,
     AdminUserActivityResponse,
     AdminUserChallengeResponse,
@@ -28,6 +32,7 @@ from app.schemas.admin import (
     AdminUserPostResponse,
     AdminUserResponse,
     CategoryMetricsResponse,
+    CommunityPostDetailResponse,
     CommunityPostResponse,
     CreateAchievementRequest,
     CreateAdminPostRequest,
@@ -64,6 +69,7 @@ from app.services.bootstrap import (
     serialize_post,
     serialize_user,
     serialize_user_challenge,
+    visible_posts_for_user,
 )
 from app.services.seed import assign_challenges_for_user
 from app.services.user_progress import recalculate_user_progress
@@ -163,7 +169,6 @@ def serialize_admin_user_detail(user: User) -> AdminUserDetailResponse:
                 username=user.username,
                 userEmail=user.email,
                 note=item.note or "",
-                media=[AdminMediaResponse(**media.model_dump()) for media in serialize_activity(item).media],
             )
             for item in recent_activities
         ],
@@ -175,7 +180,6 @@ def serialize_admin_user_detail(user: User) -> AdminUserDetailResponse:
                 id=str(item.id),
                 author=item.author_name,
                 content=item.text,
-                visibility=item.visibility,
                 state=item.moderation_state,
                 reportsCount=item.reports_count,
                 createdAt=item.created_at,
@@ -193,6 +197,12 @@ def serialize_admin_activity(activity: Activity) -> AdminUserActivityResponse:
         username=activity.user.username,
         userEmail=activity.user.email,
         note=activity.note or "",
+    )
+
+
+def serialize_admin_activity_detail(activity: Activity) -> AdminActivityDetailResponse:
+    return AdminActivityDetailResponse(
+        **serialize_admin_activity(activity).model_dump(),
         media=[AdminMediaResponse(**media.model_dump()) for media in serialize_activity(activity).media],
     )
 
@@ -235,11 +245,16 @@ def serialize_admin_post(post: Post) -> CommunityPostResponse:
         id=str(post.id),
         author=post.author_name,
         content=post.text,
-        visibility=post.visibility,
         state=post.moderation_state,
         reportsCount=post.reports_count,
-        media=[AdminMediaResponse(**media.model_dump()) for media in serialize_post(post).media],
         createdAt=post.created_at,
+    )
+
+
+def serialize_admin_post_detail(post: Post) -> CommunityPostDetailResponse:
+    return CommunityPostDetailResponse(
+        **serialize_admin_post(post).model_dump(),
+        media=[AdminMediaResponse(**media.model_dump()) for media in serialize_post(post).media],
     )
 
 
@@ -332,7 +347,7 @@ def challenges(current_user: User = Depends(get_current_user), db: Session = Dep
 @router.get("/posts", response_model=PostsEnvelope)
 def posts(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> PostsEnvelope:
     user = fetch_user_with_relations(db, current_user.id)
-    return PostsEnvelope(posts=[serialize_post(item) for item in sorted(user.posts, key=lambda value: value.created_at, reverse=True)])
+    return PostsEnvelope(posts=[serialize_post(item) for item in visible_posts_for_user(db, user)])
 
 
 @router.get("/chat/messages", response_model=ChatEnvelope)
@@ -399,6 +414,7 @@ def add_activity(
             user_id=user.id,
             author_name=user.full_name or user.username,
             text=f"Добавил активити: {title} ({payload.category})" + (f"\n{note}" if note else ""),
+            moderation_state="Needs review",
             created_at=now,
         )
         db.add(post)
@@ -425,13 +441,19 @@ def add_post(
 ) -> PostEnvelope:
     if not payload.text.strip() and not payload.media:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Post text or media is required.")
-    post = Post(user_id=current_user.id, author_name=current_user.full_name, text=payload.text.strip(), created_at=datetime.now(timezone.utc))
+    user = fetch_user_with_relations(db, current_user.id)
+    post = Post(
+        user_id=current_user.id,
+        author_name=current_user.full_name or current_user.username,
+        text=payload.text.strip(),
+        moderation_state="Needs review",
+        created_at=datetime.now(timezone.utc),
+    )
     db.add(post)
     db.flush()
     for media in payload.media:
         db.add(PostMedia(post_id=post.id, kind=media.kind, data=base64.b64decode(media.base64Data.encode("utf-8"))))
     db.flush()
-    user = fetch_user_with_relations(db, current_user.id)
     recalculate_user_progress(user)
     assign_challenges_for_user(db, user, db.scalars(select(Challenge)).all())
     db.flush()
@@ -613,7 +635,7 @@ def admin_activities(
 ) -> list[AdminUserActivityResponse]:
     stmt = (
         select(Activity)
-        .options(selectinload(Activity.user), selectinload(Activity.media))
+        .options(selectinload(Activity.user))
         .order_by(Activity.created_at.desc())
     )
     if category:
@@ -642,6 +664,97 @@ def admin_activity_metrics(
         totalPoints=sum(item.points for item in activities),
         totalCo2Saved=round(sum(item.co2_saved for item in activities), 2),
         uniqueUsers=len({item.user_id for item in activities}),
+    )
+
+
+@router.get("/admin/activities/{activity_id}", response_model=AdminActivityDetailResponse)
+def admin_activity_detail(
+    activity_id: str,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> AdminActivityDetailResponse:
+    activity = db.scalar(
+        select(Activity)
+        .options(selectinload(Activity.user), selectinload(Activity.media))
+        .where(Activity.id == parse_uuid(activity_id))
+    )
+    if not activity:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity not found.")
+    return serialize_admin_activity_detail(activity)
+
+
+@router.get("/admin/dashboard/eco-analytics", response_model=EcoAnalyticsResponse)
+def admin_eco_analytics(
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> EcoAnalyticsResponse:
+    fixed_categories = ["Транспорт", "Вода", "Пластик", "Отходы", "Энергия"]
+    category_stats = {
+        category: {"count": 0, "co2Saved": 0.0}
+        for category in fixed_categories
+    }
+    top_users: dict[str, dict[str, str | int | float]] = {}
+    custom_activities_count = 0
+
+    activities = db.scalars(select(Activity).options(selectinload(Activity.user))).all()
+
+    for activity in activities:
+        if activity.category == "Своя активность":
+            custom_activities_count += 1
+        elif activity.category in category_stats:
+            category_stats[activity.category]["count"] += 1
+            category_stats[activity.category]["co2Saved"] += activity.co2_saved
+
+        user_key = str(activity.user.id)
+        if user_key not in top_users:
+            top_users[user_key] = {
+                "userId": user_key,
+                "username": activity.user.username,
+                "activitiesCount": 0,
+                "ecoPoints": activity.user.points,
+                "co2Saved": activity.user.co2_saved_total,
+            }
+        top_users[user_key]["activitiesCount"] += 1
+
+    ordered_breakdown = [
+        EcoAnalyticsCategoryResponse(
+            category=category,
+            count=category_stats[category]["count"],
+            co2Saved=round(category_stats[category]["co2Saved"], 2),
+        )
+        for category in fixed_categories
+    ]
+
+    top_category = max(
+        ordered_breakdown,
+        key=lambda item: (item.count, item.co2Saved, -fixed_categories.index(item.category)),
+    ).category if ordered_breakdown else ""
+
+    average_co2 = round(
+        sum(activity.co2_saved for activity in activities) / len(activities),
+        2,
+    ) if activities else 0.0
+
+    top_users_by_activity = sorted(
+        (
+            EcoAnalyticsTopUserResponse(
+                userId=item["userId"],
+                username=item["username"],
+                activitiesCount=item["activitiesCount"],
+                ecoPoints=item["ecoPoints"],
+                co2Saved=item["co2Saved"],
+            )
+            for item in top_users.values()
+        ),
+        key=lambda item: (-item.activitiesCount, -item.co2Saved, item.username.lower()),
+    )[:5]
+
+    return EcoAnalyticsResponse(
+        categoryBreakdown=ordered_breakdown,
+        topCategory=top_category,
+        customActivitiesCount=custom_activities_count,
+        averageCo2PerActivity=average_co2,
+        topUsersByActivity=top_users_by_activity,
     )
 
 
@@ -911,18 +1024,15 @@ def delete_achievement(
 def admin_posts(
     search: str | None = None,
     state: str | None = None,
-    visibility: str | None = None,
     _: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ) -> list[CommunityPostResponse]:
-    stmt = select(Post).options(selectinload(Post.media)).order_by(Post.created_at.desc())
+    stmt = select(Post).order_by(Post.created_at.desc())
     if search:
         pattern = f"%{search.strip()}%"
         stmt = stmt.where((Post.author_name.ilike(pattern)) | (Post.text.ilike(pattern)))
     if state:
         stmt = stmt.where(Post.moderation_state == state)
-    if visibility:
-        stmt = stmt.where(Post.visibility == visibility)
     return [serialize_admin_post(item) for item in db.scalars(stmt).all()]
 
 
@@ -931,11 +1041,24 @@ def admin_post_metrics(_: User = Depends(get_current_admin), db: Session = Depen
     posts = db.scalars(select(Post)).all()
     return PostMetricsResponse(
         totalPosts=len(posts),
-        flaggedPosts=sum(1 for item in posts if item.moderation_state == "Flagged"),
         needsReviewPosts=sum(1 for item in posts if item.moderation_state == "Needs review"),
         hiddenPosts=sum(1 for item in posts if item.moderation_state == "Hidden"),
         totalReports=sum(item.reports_count for item in posts),
     )
+
+
+@router.get("/admin/posts/{post_id}", response_model=CommunityPostDetailResponse)
+def admin_post_detail(
+    post_id: str,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> CommunityPostDetailResponse:
+    post = db.scalar(
+        select(Post).options(selectinload(Post.media)).where(Post.id == parse_uuid(post_id))
+    )
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
+    return serialize_admin_post_detail(post)
 
 
 @router.patch("/admin/posts/{post_id}", response_model=CommunityPostResponse)
@@ -948,7 +1071,6 @@ def update_admin_post(
     post = db.scalar(select(Post).where(Post.id == parse_uuid(post_id)))
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
-    post.visibility = payload.visibility
     post.moderation_state = payload.state
     post.moderator_note = payload.moderatorNote.strip() or None
     db.commit()
@@ -970,7 +1092,7 @@ def create_admin_post(
         user_id=current_admin.id,
         author_name=author,
         text=content,
-        visibility=payload.visibility,
+        visibility="PUBLIC",
         moderation_state=payload.state,
         reports_count=payload.reportsCount,
         created_at=datetime.now(timezone.utc),

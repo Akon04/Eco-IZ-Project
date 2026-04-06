@@ -2,7 +2,12 @@ import { apiRequest } from "@/lib/api/client";
 import { wait } from "@/lib/api/helpers";
 import { isMockMode } from "@/lib/config";
 import { mockActivities, mockActivityMetrics } from "@/lib/mocks";
-import type { ActivityFilters, ActivityMetrics, AdminActivity } from "@/lib/types";
+import type {
+  ActivityFilters,
+  ActivityMetrics,
+  AdminActivity,
+  AdminActivityDetail,
+} from "@/lib/types";
 
 export async function listActivities(
   filters: ActivityFilters = {},
@@ -46,6 +51,23 @@ export async function getActivityMetrics(): Promise<ActivityMetrics> {
 
   await wait(40);
   return mockActivityMetrics;
+}
+
+export async function getActivityDetail(
+  activityId: string,
+): Promise<AdminActivityDetail> {
+  if (!isMockMode()) {
+    return apiRequest<AdminActivityDetail>(`/admin/activities/${activityId}`);
+  }
+
+  await wait(50);
+
+  const activity = mockActivities.find((item) => item.id === activityId);
+  if (!activity) {
+    throw new Error("Activity not found");
+  }
+
+  return activity;
 }
 
 export async function deleteActivity(activityId: string): Promise<void> {

@@ -2,12 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 
 import { EvidenceGallery } from "@/components/media/evidence-gallery";
+import { StatePanel } from "@/components/state-panel";
 import { useToast } from "@/components/toast-provider";
-import { deletePost, updatePost } from "@/lib/api/posts";
+import { deletePost, getPostDetail, updatePost } from "@/lib/api/posts";
 import { queryKeys } from "@/lib/query-keys";
 import type { CommunityPost, UpdatePostPayload } from "@/lib/types";
 import { postFormSchema, type PostFormValues } from "@/lib/validation";
@@ -17,14 +18,15 @@ type PostDetailPanelProps = {
 };
 
 export function PostDetailPanel({ post }: PostDetailPanelProps) {
-  const visibilityLabels: Record<CommunityPost["visibility"], string> = {
-    PUBLIC: "Публичный",
-    FOLLOWERS: "Подписчики",
-    PRIVATE: "Приватный",
-  };
-
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const detailQuery = useQuery({
+    queryKey: queryKeys.posts.detail(post.id),
+    queryFn: () => getPostDetail(post.id),
+    enabled: Boolean(post.id),
+  });
+  const detailedPost = detailQuery.data ?? post;
+
   const {
     register,
     handleSubmit,
@@ -34,11 +36,11 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
   } = useForm<PostFormValues>({
     resolver: zodResolver(postFormSchema),
     defaultValues: {
-      visibility: post.visibility,
       state: post.state,
       moderatorNote: "Действие модерации позже будет попадать в аудит-лог backend.",
     },
   });
+
   const mutation = useMutation({
     mutationFn: (payload: UpdatePostPayload) => updatePost(post.id, payload),
     onSuccess: async (updated) => {
@@ -49,6 +51,7 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
       await queryClient.invalidateQueries({ queryKey: queryKeys.posts.metrics });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.posts.detail(post.id) });
     },
     onError: () => {
       showToast({
@@ -58,6 +61,7 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
       });
     },
   });
+
   const deleteMutation = useMutation({
     mutationFn: () => deletePost(post.id),
     onSuccess: async () => {
@@ -68,6 +72,7 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
       await queryClient.invalidateQueries({ queryKey: queryKeys.posts.metrics });
+      await queryClient.removeQueries({ queryKey: queryKeys.posts.detail(post.id) });
     },
     onError: () => {
       showToast({
@@ -80,12 +85,11 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
 
   useEffect(() => {
     reset({
-      visibility: post.visibility,
-      state: post.state,
+      state: detailedPost.state,
       moderatorNote:
         "Действие модерации позже будет попадать в аудит-лог backend.",
     });
-  }, [post, reset]);
+  }, [detailedPost.state, post.id, reset]);
 
   function onSubmit(values: PostFormValues) {
     mutation.mutate(values);
@@ -106,49 +110,56 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
     }).format(new Date(value));
   }
 
+  if (detailQuery.isError) {
+    return (
+      <StatePanel
+        title="Не удалось загрузить пост"
+        description="Подробности поста сейчас недоступны. Попробуй выбрать запись еще раз."
+        tone="error"
+      />
+    );
+  }
+
   return (
     <article className="card">
       <h2 className="section-title">Выбранный пост</h2>
+      {detailQuery.isFetching && !detailQuery.data ? (
+        <StatePanel
+          title="Загружаем подробности"
+          description="Подтягиваем текст поста и фото-доказательства."
+        />
+      ) : null}
+
       <div className="detail-stack">
         <div className="detail-row">
           <span className="muted">Автор</span>
-          <strong>{post.author}</strong>
+          <strong>{detailedPost.author}</strong>
         </div>
         <div className="detail-row">
           <span className="muted">Жалобы</span>
-          <strong>{post.reportsCount}</strong>
+          <strong>{detailedPost.reportsCount}</strong>
         </div>
         <div className="detail-row">
           <span className="muted">Создан</span>
-          <strong>{formatDate(post.createdAt)}</strong>
+          <strong>{formatDate(detailedPost.createdAt)}</strong>
         </div>
       </div>
 
       <div className="card inset-card">
         <p className="muted">Содержимое поста</p>
-        <p>{post.content || "У этого поста нет текста, только медиа."}</p>
+        <p>{detailedPost.content || "У этого поста нет текста, только медиа."}</p>
       </div>
 
-      <EvidenceGallery media={post.media} title="Фото в посте" />
+      <EvidenceGallery
+        media={detailQuery.data?.media ?? []}
+        title="Фото в посте"
+      />
 
       <div className="form-shell" style={{ marginTop: 16 }}>
-        <label className="field">
-          <span>Видимость</span>
-          <select {...register("visibility")}>
-            <option value="PUBLIC">{visibilityLabels.PUBLIC}</option>
-            <option value="FOLLOWERS">{visibilityLabels.FOLLOWERS}</option>
-            <option value="PRIVATE">{visibilityLabels.PRIVATE}</option>
-          </select>
-          {errors.visibility ? (
-            <p className="field-error">{errors.visibility.message}</p>
-          ) : null}
-        </label>
-
         <label className="field">
           <span>Статус модерации</span>
           <select {...register("state")}>
             <option value="Published">Опубликован</option>
-            <option value="Flagged">Отмечен</option>
             <option value="Needs review">Нужна проверка</option>
             <option value="Hidden">Скрыт</option>
           </select>
@@ -203,8 +214,7 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
             className="ghost-button"
             onClick={() =>
               reset({
-                visibility: post.visibility,
-                state: post.state,
+                state: detailedPost.state,
                 moderatorNote:
                   "Действие модерации позже будет попадать в аудит-лог backend.",
               })

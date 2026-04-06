@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
+import { EcoAnalyticsPanel } from "@/components/dashboard/eco-analytics-panel";
 import { MetricCards } from "@/components/metric-cards";
 import { StatePanel } from "@/components/state-panel";
 import { getAchievementMetrics, listAchievements } from "@/lib/api/achievements";
+import { getEcoAnalytics } from "@/lib/api/dashboard";
 import { getCategoryMetrics } from "@/lib/api/categories";
 import { isMockMode } from "@/lib/config";
 import { getHabitMetrics } from "@/lib/api/habits";
@@ -16,6 +19,7 @@ import type {
   Achievement,
   AchievementMetrics,
   CommunityPost,
+  EcoAnalytics,
   PostMetrics,
   UserMetrics,
 } from "@/lib/types";
@@ -48,6 +52,7 @@ type DashboardWorkspaceProps = {
     status: "ACTIVE" | "REVIEW" | "SUSPENDED";
   }>;
   initialAchievements: Achievement[];
+  initialEcoAnalytics: EcoAnalytics;
 };
 
 export function DashboardWorkspace({
@@ -59,10 +64,11 @@ export function DashboardWorkspace({
   initialPosts,
   initialUsers,
   initialAchievements,
+  initialEcoAnalytics,
 }: DashboardWorkspaceProps) {
+  const [focusExpanded, setFocusExpanded] = useState(false);
   const postStateLabels: Record<CommunityPost["state"], string> = {
     Published: "Опубликован",
-    Flagged: "Отмечен",
     "Needs review": "Нужна проверка",
     Hidden: "Скрыт",
   };
@@ -118,7 +124,13 @@ export function DashboardWorkspace({
     placeholderData: (previousData) => previousData,
   });
 
-  const hasError =
+  const ecoAnalyticsQuery = useQuery({
+    queryKey: queryKeys.dashboard.ecoAnalytics,
+    queryFn: getEcoAnalytics,
+    initialData: initialEcoAnalytics,
+  });
+
+  const hasAnyError =
     userMetricsQuery.isError ||
     habitMetricsQuery.isError ||
     achievementMetricsQuery.isError ||
@@ -126,26 +138,19 @@ export function DashboardWorkspace({
     categoryMetricsQuery.isError ||
     postsQuery.isError ||
     usersQuery.isError ||
-    achievementsQuery.isError;
+    achievementsQuery.isError ||
+    ecoAnalyticsQuery.isError;
 
-  if (hasError) {
-    return (
-      <StatePanel
-        title="Не удалось загрузить панель"
-        description="Часть данных панели сейчас недоступна. Попробуй обновить страницу."
-        tone="error"
-      />
-    );
-  }
-
-  const userMetrics = userMetricsQuery.data;
-  const habitMetrics = habitMetricsQuery.data;
-  const achievementMetrics = achievementMetricsQuery.data;
-  const postMetrics = postMetricsQuery.data;
-  const categoryMetrics = categoryMetricsQuery.data;
-  const posts = postsQuery.data;
-  const users = usersQuery.data;
-  const achievements = achievementsQuery.data;
+  const userMetrics = userMetricsQuery.data ?? initialUserMetrics;
+  const habitMetrics = habitMetricsQuery.data ?? initialHabitMetrics;
+  const achievementMetrics =
+    achievementMetricsQuery.data ?? initialAchievementMetrics;
+  const postMetrics = postMetricsQuery.data ?? initialPostMetrics;
+  const categoryMetrics = categoryMetricsQuery.data ?? initialCategoryMetrics;
+  const posts = postsQuery.data ?? initialPosts;
+  const users = usersQuery.data ?? initialUsers;
+  const achievements = achievementsQuery.data ?? initialAchievements;
+  const ecoAnalytics = ecoAnalyticsQuery.data ?? initialEcoAnalytics;
 
   const isBootstrappingLiveDashboard =
     !isMockMode() &&
@@ -156,7 +161,8 @@ export function DashboardWorkspace({
       categoryMetricsQuery.isFetching ||
       postsQuery.isFetching ||
       usersQuery.isFetching ||
-      achievementsQuery.isFetching) &&
+      achievementsQuery.isFetching ||
+      ecoAnalyticsQuery.isFetching) &&
     userMetrics.totalUsers === 0 &&
     habitMetrics.totalHabits === 0 &&
     achievementMetrics.totalAchievements === 0 &&
@@ -164,7 +170,8 @@ export function DashboardWorkspace({
     categoryMetrics.totalCategories === 0 &&
     posts.length === 0 &&
     users.length === 0 &&
-    achievements.length === 0;
+    achievements.length === 0 &&
+    ecoAnalytics.categoryBreakdown.length === 0;
 
   if (isBootstrappingLiveDashboard) {
     return (
@@ -188,12 +195,8 @@ export function DashboardWorkspace({
     },
     {
       label: "Посты на модерации",
-      value: String(
-        posts.filter(
-          (post) => post.state === "Flagged" || post.state === "Needs review",
-        ).length,
-      ),
-      note: `${postMetrics.flaggedPosts} отмечено, ${postMetrics.totalReports} жалоб`,
+      value: String(posts.filter((post) => post.state === "Needs review").length),
+      note: `${postMetrics.needsReviewPosts} ждут проверки, ${postMetrics.totalReports} жалоб`,
     },
     {
       label: "Ачивки",
@@ -203,7 +206,7 @@ export function DashboardWorkspace({
   ];
 
   const moderationQueue = posts
-    .filter((post) => post.state === "Flagged" || post.state === "Needs review")
+    .filter((post) => post.state === "Needs review")
     .map((post) => ({
       label: `Пост от ${post.author}`,
       status: postStateLabels[post.state],
@@ -233,19 +236,41 @@ export function DashboardWorkspace({
   ];
 
   const recentItems = [
-    `${postMetrics.flaggedPosts} постов сейчас отмечены для модерации`,
+    `${postMetrics.needsReviewPosts} постов сейчас ждут модерации`,
     `${userMetrics.adminCount} пользователей имеют расширенный доступ`,
     `${habitMetrics.totalHabits} активностей доступны в каталоге`,
     `${achievementMetrics.maxTargetValue} — текущий максимальный порог у ачивок`,
   ];
 
+  const focusItems = [...moderationQueue, ...operationsQueue];
+  const visibleFocusItems = focusExpanded ? focusItems : focusItems.slice(0, 5);
+
   return (
     <>
+      {hasAnyError ? (
+        <StatePanel
+          title="Часть данных панели недоступна"
+          description="Мы показываем то, что уже удалось загрузить. Остальные блоки можно обновить позже без потери всей панели."
+          tone="warning"
+        />
+      ) : null}
+
       <MetricCards items={topMetrics} columns="four" />
 
       <section className="split" style={{ marginTop: 16 }}>
         <article className="card">
-          <h2 className="section-title">Фокус на сегодня</h2>
+          <div className="section-head">
+            <h2 className="section-title" style={{ marginBottom: 0 }}>Фокус на сегодня</h2>
+            {focusItems.length > 5 ? (
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => setFocusExpanded((value) => !value)}
+              >
+                {focusExpanded ? "Свернуть" : "Показать все"}
+              </button>
+            ) : null}
+          </div>
           <div className="table-wrap">
             <table>
               <thead>
@@ -256,7 +281,7 @@ export function DashboardWorkspace({
                 </tr>
               </thead>
               <tbody>
-                {[...moderationQueue, ...operationsQueue].map((item) => (
+                {visibleFocusItems.map((item) => (
                   <tr key={`${item.label}-${item.status}`}>
                     <td>{item.label}</td>
                     <td>
@@ -281,6 +306,20 @@ export function DashboardWorkspace({
           </div>
         </article>
       </section>
+
+      {ecoAnalyticsQuery.isError &&
+      ecoAnalytics.categoryBreakdown.length === 0 &&
+      ecoAnalytics.topUsersByActivity.length === 0 ? (
+        <section style={{ marginTop: 16 }}>
+          <StatePanel
+            title="Эко-аналитика временно недоступна"
+            description="Остальные разделы панели работают, а eco-аналитику можно обновить позже."
+            tone="warning"
+          />
+        </section>
+      ) : (
+        <EcoAnalyticsPanel analytics={ecoAnalytics} />
+      )}
     </>
   );
 }

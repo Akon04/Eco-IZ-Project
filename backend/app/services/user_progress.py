@@ -85,7 +85,7 @@ def recalculate_user_progress(user: User) -> None:
     base_points = sum(item.points for item in activities)
     total_co2 = round(sum(item.co2_saved for item in activities), 2)
     streak_days, last_activity_on = _streak_from_dates([item.created_at.date() for item in activities])
-    posts_count = len(user.posts)
+    posts_count = sum(1 for post in user.posts if post.moderation_state == "Published")
 
     earned_reward_points = 0
     latest_activity_at = activities[-1].created_at if activities else datetime.now(timezone.utc)

@@ -4,6 +4,7 @@ import { isMockMode } from "@/lib/config";
 import { mockPosts } from "@/lib/mocks";
 import type {
   CommunityPost,
+  CommunityPostDetail,
   PostFilters,
   PostMetrics,
   UpdatePostPayload,
@@ -17,9 +18,6 @@ export async function listPosts(
     if (filters.search?.trim()) params.set("search", filters.search.trim());
     if (filters.state && filters.state !== "ALL") {
       params.set("state", filters.state);
-    }
-    if (filters.visibility && filters.visibility !== "ALL") {
-      params.set("visibility", filters.visibility);
     }
 
     return apiRequest<CommunityPost[]>(
@@ -37,12 +35,8 @@ export async function listPosts(
       post.content.toLowerCase().includes(query);
     const matchesState =
       !filters.state || filters.state === "ALL" || post.state === filters.state;
-    const matchesVisibility =
-      !filters.visibility ||
-      filters.visibility === "ALL" ||
-      post.visibility === filters.visibility;
 
-    return matchesSearch && matchesState && matchesVisibility;
+    return matchesSearch && matchesState;
   });
 }
 
@@ -55,11 +49,25 @@ export async function getPostMetrics(): Promise<PostMetrics> {
 
   return {
     totalPosts: mockPosts.length,
-    flaggedPosts: mockPosts.filter((post) => post.state === "Flagged").length,
     needsReviewPosts: mockPosts.filter((post) => post.state === "Needs review").length,
     hiddenPosts: mockPosts.filter((post) => post.state === "Hidden").length,
     totalReports: mockPosts.reduce((sum, post) => sum + post.reportsCount, 0),
   };
+}
+
+export async function getPostDetail(postId: string): Promise<CommunityPostDetail> {
+  if (!isMockMode()) {
+    return apiRequest<CommunityPostDetail>(`/admin/posts/${postId}`);
+  }
+
+  await wait(50);
+
+  const post = mockPosts.find((item) => item.id === postId);
+  if (!post) {
+    throw new Error("Post not found");
+  }
+
+  return post;
 }
 
 export async function updatePost(
@@ -82,7 +90,6 @@ export async function updatePost(
 
   return {
     ...post,
-    visibility: payload.visibility,
     state: payload.state,
   };
 }

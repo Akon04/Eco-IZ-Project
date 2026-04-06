@@ -51,11 +51,22 @@ export async function apiRequest<T>(
       const errorBody = (await response.json()) as {
         message?: string;
         error?: string;
+        detail?: string | { detail?: string } | Array<{ msg?: string }>;
       };
       if (errorBody.message) {
         message = errorBody.message;
       } else if (errorBody.error) {
         message = errorBody.error;
+      } else if (typeof errorBody.detail === "string") {
+        message = errorBody.detail;
+      } else if (Array.isArray(errorBody.detail)) {
+        message =
+          errorBody.detail
+            .map((item) => item.msg)
+            .filter(Boolean)
+            .join(", ") || message;
+      } else if (errorBody.detail && typeof errorBody.detail === "object" && errorBody.detail.detail) {
+        message = errorBody.detail.detail;
       }
     } catch {
       message = response.statusText || message;

@@ -104,7 +104,6 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
         co2Saved: 1.5,
         points: 20,
         note: "Университет вместо такси",
-        media: [],
         createdAt: "2026-03-29T08:30:00Z",
       },
       {
@@ -117,7 +116,6 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
         co2Saved: 0,
         points: 15,
         note: "Сократила душ до 5 минут",
-        media: [],
         createdAt: "2026-03-28T09:10:00Z",
       },
     ],

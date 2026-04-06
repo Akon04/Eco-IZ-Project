@@ -1,9 +1,11 @@
 import type {
   ActivityMetrics,
   AdminActivity,
+  AdminActivityDetail,
   Achievement,
   AdminUser,
   CommunityPost,
+  CommunityPostDetail,
   EcoCategory,
   Habit,
 } from "@/lib/types";
@@ -59,7 +61,7 @@ export const mockUsers: AdminUser[] = [
   },
 ];
 
-export const mockActivities: AdminActivity[] = [
+export const mockActivities: AdminActivityDetail[] = [
   {
     id: "activity-1",
     userId: "user-1",
@@ -296,13 +298,12 @@ export const mockAchievements: Achievement[] = [
   },
 ];
 
-export const mockPosts: CommunityPost[] = [
+export const mockPosts: CommunityPostDetail[] = [
   {
     id: "post-1",
     author: "green_step",
     content: "Started walking to university this week instead of taking a taxi.",
-    visibility: "PUBLIC",
-    state: "Flagged",
+    state: "Needs review",
     reportsCount: 3,
     media: [],
     createdAt: "2025-03-14",
@@ -311,7 +312,6 @@ export const mockPosts: CommunityPost[] = [
     id: "post-2",
     author: "eco_daily",
     content: "Shared a checklist for reducing water use at home.",
-    visibility: "FOLLOWERS",
     state: "Published",
     reportsCount: 0,
     media: [],
@@ -321,7 +321,6 @@ export const mockPosts: CommunityPost[] = [
     id: "post-3",
     author: "urban_leaf",
     content: "Posted a photo dump with repeated promotional captions.",
-    visibility: "PUBLIC",
     state: "Needs review",
     reportsCount: 2,
     media: [],
@@ -331,7 +330,6 @@ export const mockPosts: CommunityPost[] = [
     id: "post-4",
     author: "recycle_hub",
     content: "Community cleanup event recap with location details.",
-    visibility: "PUBLIC",
     state: "Hidden",
     reportsCount: 1,
     media: [],

@@ -48,8 +48,7 @@ export type AdminUserPost = {
   id: string;
   author: string;
   content: string;
-  visibility: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
-  state: "Published" | "Flagged" | "Needs review" | "Hidden";
+  state: "Published" | "Needs review" | "Hidden";
   reportsCount: number;
   createdAt: string;
   mediaCount: number;
@@ -94,8 +93,11 @@ export type AdminActivity = {
   co2Saved: number;
   points: number;
   note: string;
-  media: AdminMedia[];
   createdAt: string;
+};
+
+export type AdminActivityDetail = AdminActivity & {
+  media: AdminMedia[];
 };
 
 export type ActivityFilters = {
@@ -108,6 +110,28 @@ export type ActivityMetrics = {
   totalPoints: number;
   totalCo2Saved: number;
   uniqueUsers: number;
+};
+
+export type EcoAnalyticsCategory = {
+  category: string;
+  count: number;
+  co2Saved: number;
+};
+
+export type EcoAnalyticsTopUser = {
+  userId: string;
+  username: string;
+  activitiesCount: number;
+  ecoPoints: number;
+  co2Saved: number;
+};
+
+export type EcoAnalytics = {
+  categoryBreakdown: EcoAnalyticsCategory[];
+  topCategory: string;
+  customActivitiesCount: number;
+  averageCo2PerActivity: number;
+  topUsersByActivity: EcoAnalyticsTopUser[];
 };
 
 export type EcoCategory = {
@@ -196,28 +220,27 @@ export type CommunityPost = {
   id: string;
   author: string;
   content: string;
-  visibility: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
-  state: "Published" | "Flagged" | "Needs review" | "Hidden";
+  state: "Published" | "Needs review" | "Hidden";
   reportsCount: number;
-  media: AdminMedia[];
   createdAt: string;
+};
+
+export type CommunityPostDetail = CommunityPost & {
+  media: AdminMedia[];
 };
 
 export type PostFilters = {
   search?: string;
   state?: CommunityPost["state"] | "ALL";
-  visibility?: CommunityPost["visibility"] | "ALL";
 };
 
 export type UpdatePostPayload = {
-  visibility: CommunityPost["visibility"];
   state: CommunityPost["state"];
   moderatorNote: string;
 };
 
 export type PostMetrics = {
   totalPosts: number;
-  flaggedPosts: number;
   needsReviewPosts: number;
   hiddenPosts: number;
   totalReports: number;

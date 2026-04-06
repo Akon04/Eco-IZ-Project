@@ -1,4 +1,7 @@
 export const queryKeys = {
+  dashboard: {
+    ecoAnalytics: ["dashboard", "eco-analytics"] as const,
+  },
   auth: {
     me: ["auth", "me"] as const,
   },
@@ -11,6 +14,7 @@ export const queryKeys = {
   activities: {
     all: ["activities"] as const,
     list: (filters: string) => ["activities", "list", filters] as const,
+    detail: (activityId: string) => ["activities", "detail", activityId] as const,
     metrics: ["activities", "metrics"] as const,
   },
   categories: {
@@ -31,6 +35,7 @@ export const queryKeys = {
   posts: {
     all: ["posts"] as const,
     list: (filters: string) => ["posts", "list", filters] as const,
+    detail: (postId: string) => ["posts", "detail", postId] as const,
     metrics: ["posts", "metrics"] as const,
   },
 };

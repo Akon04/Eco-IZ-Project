@@ -31,8 +31,11 @@ class AdminUserActivityResponse(BaseModel):
     co2Saved: float
     points: int
     note: str
-    media: list["AdminMediaResponse"]
     createdAt: datetime
+
+
+class AdminActivityDetailResponse(AdminUserActivityResponse):
+    media: list["AdminMediaResponse"]
 
 
 class AdminUserChallengeResponse(BaseModel):
@@ -53,7 +56,6 @@ class AdminUserPostResponse(BaseModel):
     id: str
     author: str
     content: str
-    visibility: str
     state: str
     reportsCount: int
     createdAt: datetime
@@ -88,6 +90,28 @@ class AdminActivityMetrics(BaseModel):
     totalPoints: int
     totalCo2Saved: float
     uniqueUsers: int
+
+
+class EcoAnalyticsCategoryResponse(BaseModel):
+    category: str
+    count: int
+    co2Saved: float
+
+
+class EcoAnalyticsTopUserResponse(BaseModel):
+    userId: str
+    username: str
+    activitiesCount: int
+    ecoPoints: int
+    co2Saved: float
+
+
+class EcoAnalyticsResponse(BaseModel):
+    categoryBreakdown: list[EcoAnalyticsCategoryResponse]
+    topCategory: str
+    customActivitiesCount: int
+    averageCo2PerActivity: float
+    topUsersByActivity: list[EcoAnalyticsTopUserResponse]
 
 
 class UpdateAdminUserRequest(BaseModel):
@@ -182,23 +206,23 @@ class CommunityPostResponse(BaseModel):
     id: str
     author: str
     content: str
-    visibility: str
     state: str
     reportsCount: int
-    media: list[AdminMediaResponse]
     createdAt: datetime
+
+
+class CommunityPostDetailResponse(CommunityPostResponse):
+    media: list[AdminMediaResponse]
 
 
 class PostMetricsResponse(BaseModel):
     totalPosts: int
-    flaggedPosts: int
     needsReviewPosts: int
     hiddenPosts: int
     totalReports: int
 
 
 class UpdatePostRequest(BaseModel):
-    visibility: str
     state: str
     moderatorNote: str = ""
 
@@ -206,7 +230,6 @@ class UpdatePostRequest(BaseModel):
 class CreateAdminPostRequest(BaseModel):
     author: str
     content: str
-    visibility: str = "PUBLIC"
     state: str = "Published"
     reportsCount: int = 0
 
