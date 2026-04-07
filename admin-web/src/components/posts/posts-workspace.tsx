@@ -23,7 +23,6 @@ export function PostsWorkspace({ initialPosts, metrics }: PostsWorkspaceProps) {
   const [filters, setFilters] = useState<PostFilters>({
     search: initialSearch,
     state: "ALL",
-    visibility: "ALL",
   });
   const [selectedPostId, setSelectedPostId] = useState(initialPosts[0]?.id ?? "");
   const deferredSearch = useDeferredValue(filters.search ?? "");
@@ -80,7 +79,7 @@ export function PostsWorkspace({ initialPosts, metrics }: PostsWorkspaceProps) {
         ) : (
           <StatePanel
             title="Посты не найдены"
-            description="Сбрось поиск или ослабь фильтры по статусу и видимости."
+            description="Сбрось поиск или ослабь фильтр по статусу."
             tone="warning"
           />
         )}

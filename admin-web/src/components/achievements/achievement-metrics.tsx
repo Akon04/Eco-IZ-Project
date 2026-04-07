@@ -1,5 +1,6 @@
 import { MetricCards } from "@/components/metric-cards";
 import type { AchievementMetrics } from "@/lib/types";
+import type { MetricCardItem } from "@/components/metric-cards";
 
 type AchievementMetricsProps = {
   metrics: AchievementMetrics;
@@ -8,7 +9,7 @@ type AchievementMetricsProps = {
 export function AchievementMetricsCards({
   metrics,
 }: AchievementMetricsProps) {
-  const cards = [
+  const cards: MetricCardItem[] = [
     {
       label: "Всего ачивок",
       value: metrics.totalAchievements,
@@ -25,7 +26,7 @@ export function AchievementMetricsCards({
       label: "Максимальная цель",
       value: metrics.maxTargetValue,
       note: "Наибольшее пороговое значение",
-      icon: "flagged",
+      icon: "review",
     },
   ];
 

@@ -11,7 +11,7 @@ from app.db.session import get_db
 from app.models.admin import EcoCategory, Habit
 from app.models.challenge import Challenge, UserChallenge
 from app.models.chat import ChatMessage
-from app.models.post import Post, PostMedia
+from app.models.post import Post, PostMedia, PostReport
 from app.models.user import Activity, ActivityMedia, User
 from app.schemas.admin import (
     AdminActivityDetailResponse,
@@ -58,6 +58,7 @@ from app.schemas.mutations import (
     ChallengeClaimResponse,
     PostCreateRequest,
     PostEnvelope,
+    PostReportRequest,
     PostsEnvelope,
 )
 from app.services.ai import ai_response
@@ -75,6 +76,13 @@ from app.services.seed import assign_challenges_for_user
 from app.services.user_progress import recalculate_user_progress
 
 router = APIRouter()
+
+POST_REPORT_REASONS = {
+    "Спам или реклама",
+    "Странные или опасные действия",
+    "Оскорбительный контент",
+    "Подозрительный пользователь",
+}
 
 
 def fetch_user_with_relations(db: Session, user_id) -> User:
@@ -252,9 +260,17 @@ def serialize_admin_post(post: Post) -> CommunityPostResponse:
 
 
 def serialize_admin_post_detail(post: Post) -> CommunityPostDetailResponse:
+    reason_counts: dict[str, int] = {}
+    for report in post.reports:
+        reason_counts[report.reason] = reason_counts.get(report.reason, 0) + 1
+
     return CommunityPostDetailResponse(
         **serialize_admin_post(post).model_dump(),
         media=[AdminMediaResponse(**media.model_dump()) for media in serialize_post(post).media],
+        reportReasons=[
+            reason if count == 1 else f"{reason} ({count})"
+            for reason, count in sorted(reason_counts.items(), key=lambda item: (-item[1], item[0]))
+        ],
     )
 
 
@@ -347,7 +363,7 @@ def challenges(current_user: User = Depends(get_current_user), db: Session = Dep
 @router.get("/posts", response_model=PostsEnvelope)
 def posts(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> PostsEnvelope:
     user = fetch_user_with_relations(db, current_user.id)
-    return PostsEnvelope(posts=[serialize_post(item) for item in visible_posts_for_user(db, user)])
+    return PostsEnvelope(posts=[serialize_post(item, viewer_id=user.id) for item in visible_posts_for_user(db, user)])
 
 
 @router.get("/chat/messages", response_model=ChatEnvelope)
@@ -461,7 +477,75 @@ def add_post(
     recalculate_user_progress(user)
     db.commit()
     db.refresh(post)
-    return PostEnvelope(post=serialize_post(post))
+    return PostEnvelope(post=serialize_post(post, viewer_id=current_user.id))
+
+
+@router.post("/posts/{post_id}/report", status_code=status.HTTP_204_NO_CONTENT)
+def report_post(
+    post_id: str,
+    payload: PostReportRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    reason = payload.reason.strip()
+    if reason not in POST_REPORT_REASONS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid report reason.")
+
+    post = db.scalar(select(Post).options(selectinload(Post.reports)).where(Post.id == parse_uuid(post_id)))
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
+    if post.user_id == current_user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot report your own post.")
+    if post.moderation_state != "Published":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only published posts can be reported.")
+
+    existing_report = next((item for item in post.reports if item.user_id == current_user.id), None)
+    if existing_report:
+        existing_report.reason = reason
+    else:
+        db.add(PostReport(post_id=post.id, user_id=current_user.id, reason=reason))
+        db.flush()
+        db.refresh(post)
+
+    refreshed_post = db.scalar(select(Post).options(selectinload(Post.reports)).where(Post.id == post.id))
+    refreshed_post.reports_count = len(refreshed_post.reports)
+    db.commit()
+
+
+@router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_own_post(
+    post_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    post = db.scalar(
+        select(Post)
+        .options(
+            selectinload(Post.user).selectinload(User.activities),
+            selectinload(Post.user).selectinload(User.posts),
+            selectinload(Post.user)
+            .selectinload(User.user_challenges)
+            .selectinload(UserChallenge.challenge),
+        )
+        .where(Post.id == parse_uuid(post_id))
+    )
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
+    if post.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can delete only your own posts.")
+
+    user_id = post.user.id
+    db.delete(post)
+    db.flush()
+    db.expire_all()
+    user = fetch_user_with_relations(db, user_id)
+    recalculate_user_progress(user)
+    assign_challenges_for_user(db, user, db.scalars(select(Challenge)).all())
+    db.flush()
+    db.expire_all()
+    user = fetch_user_with_relations(db, user_id)
+    recalculate_user_progress(user)
+    db.commit()
 
 
 @router.post("/chat/messages", response_model=ChatEnvelope, status_code=status.HTTP_201_CREATED)
@@ -1053,9 +1137,7 @@ def admin_post_detail(
     _: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ) -> CommunityPostDetailResponse:
-    post = db.scalar(
-        select(Post).options(selectinload(Post.media)).where(Post.id == parse_uuid(post_id))
-    )
+    post = db.scalar(select(Post).options(selectinload(Post.media), selectinload(Post.reports)).where(Post.id == parse_uuid(post_id)))
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
     return serialize_admin_post_detail(post)
@@ -1072,7 +1154,13 @@ def update_admin_post(
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
     post.moderation_state = payload.state
-    post.moderator_note = payload.moderatorNote.strip() or None
+    cleaned_note = payload.moderatorNote.strip()
+    if payload.state == "Hidden":
+        post.moderator_note = cleaned_note or "Нарушает правила сообщества"
+    elif payload.state == "Published":
+        post.moderator_note = cleaned_note or None
+    else:
+        post.moderator_note = cleaned_note or None
     db.commit()
     db.refresh(post)
     return serialize_admin_post(post)
@@ -1123,6 +1211,13 @@ def delete_post(
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
     user_id = post.user.id
+    db.add(
+        ChatMessage(
+            user_id=user_id,
+            role="assistant",
+            text="Публикация не прошла модерацию. Нарушает правила сообщества.",
+        )
+    )
     db.delete(post)
     db.flush()
     db.expire_all()

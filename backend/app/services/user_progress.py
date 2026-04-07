@@ -23,13 +23,18 @@ def _streak_from_dates(activity_dates: list[date]) -> tuple[int, date | None]:
     return streak, latest
 
 
-def _progress_for_challenge(title: str, activities: list[Activity], posts_count: int, base_points: int) -> int:
+def _progress_for_challenge(
+    title: str,
+    activities: list[Activity],
+    posts_count: int,
+    base_points: int,
+) -> int:
     normalized = title.casefold()
-    activities_sorted = sorted(activities, key=lambda item: item.created_at)
+    activities_sorted = sorted(activities, key=lambda item: _normalize_datetime(item.created_at))
     distinct_days_by_category: dict[str, set[date]] = {}
 
     for item in activities_sorted:
-        distinct_days_by_category.setdefault(item.category, set()).add(item.created_at.date())
+        distinct_days_by_category.setdefault(item.category, set()).add(_normalize_datetime(item.created_at).date())
 
     count_by_category = {
         category: sum(1 for item in activities_sorted if item.category == category)
@@ -59,7 +64,7 @@ def _progress_for_challenge(title: str, activities: list[Activity], posts_count:
     if normalized == "неделя сортировки":
         return count_by_category.get("Отходы", 0)
     if normalized == "эко-утро":
-        return sum(1 for item in activities_sorted if item.created_at.hour < 12)
+        return sum(1 for item in activities_sorted if _normalize_datetime(item.created_at).hour < 12)
     if normalized == "чистый воздух":
         return keyword_matches("пеш", "велосип", "самокат", "метро", "поезд", "общ.")
     if normalized == "многоразовый герой":
@@ -80,18 +85,42 @@ def _progress_for_challenge(title: str, activities: list[Activity], posts_count:
     return 0
 
 
+def _normalize_datetime(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def recalculate_user_progress(user: User) -> None:
-    activities = sorted(user.activities, key=lambda item: item.created_at)
+    activities = sorted(user.activities, key=lambda item: _normalize_datetime(item.created_at))
     base_points = sum(item.points for item in activities)
     total_co2 = round(sum(item.co2_saved for item in activities), 2)
-    streak_days, last_activity_on = _streak_from_dates([item.created_at.date() for item in activities])
+    streak_days, last_activity_on = _streak_from_dates([_normalize_datetime(item.created_at).date() for item in activities])
     posts_count = sum(1 for post in user.posts if post.moderation_state == "Published")
 
     earned_reward_points = 0
-    latest_activity_at = activities[-1].created_at if activities else datetime.now(timezone.utc)
+    latest_activity_at = _normalize_datetime(activities[-1].created_at) if activities else datetime.now(timezone.utc)
 
     for item in user.user_challenges:
-        progress = _progress_for_challenge(item.challenge.title, activities, posts_count, base_points)
+        unlocked_at = _normalize_datetime(item.unlocked_at) if item.unlocked_at else None
+        relevant_activities = [
+            activity for activity in activities
+            if unlocked_at is None or _normalize_datetime(activity.created_at) >= unlocked_at
+        ]
+        relevant_posts_count = sum(
+            1
+            for post in user.posts
+            if post.moderation_state == "Published"
+            and (unlocked_at is None or _normalize_datetime(post.created_at) >= unlocked_at)
+        )
+        relevant_points = sum(activity.points for activity in relevant_activities)
+
+        progress = _progress_for_challenge(
+            item.challenge.title,
+            relevant_activities,
+            relevant_posts_count,
+            relevant_points,
+        )
         item.current_count = progress
 
         is_completed = progress >= item.challenge.target_count

@@ -227,6 +227,8 @@ export type CommunityPost = {
 
 export type CommunityPostDetail = CommunityPost & {
   media: AdminMedia[];
+  reportReasons: string[];
+  moderatorNote?: string;
 };
 
 export type PostFilters = {

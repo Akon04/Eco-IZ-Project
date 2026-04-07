@@ -10,6 +10,9 @@ final class AppState: ObservableObject {
     @Published var isPosting = false
     @Published var isSendingMessage = false
     @Published var isClaimingChallenge = false
+    @Published var isRefreshingPosts = false
+    @Published var isRefreshingChallenges = false
+    @Published var alertTitle = "Ошибка"
     @Published var alertMessage: String?
     @Published var levelUpLevel: EcoLevel?
 
@@ -86,7 +89,7 @@ final class AppState: ObservableObject {
 
     func restoreSession() async {
         guard apiClient.hasStoredToken else { return }
-        alertMessage = nil
+        clearAlert()
         isRestoringSession = true
         defer { isRestoringSession = false }
 
@@ -106,7 +109,7 @@ final class AppState: ObservableObject {
             return false
         }
 
-        alertMessage = nil
+        clearAlert()
         isAuthenticating = true
         defer { isAuthenticating = false }
 
@@ -129,7 +132,7 @@ final class AppState: ObservableObject {
             return false
         }
 
-        alertMessage = nil
+        clearAlert()
         isAuthenticating = true
         defer { isAuthenticating = false }
 
@@ -149,6 +152,47 @@ final class AppState: ObservableObject {
         clearSession()
     }
 
+    func refreshPostsIfAuthenticated() async {
+        guard isAuthenticated else { return }
+        guard !isRefreshingPosts else { return }
+
+        isRefreshingPosts = true
+        defer { isRefreshingPosts = false }
+        do {
+            posts = try await apiClient.fetchPosts()
+        } catch {
+            guard !shouldIgnore(error) else { return }
+            present(error)
+        }
+    }
+
+    func refreshChallengesIfAuthenticated(silently: Bool = false) async {
+        guard isAuthenticated else { return }
+        guard !isRefreshingChallenges else { return }
+
+        isRefreshingChallenges = true
+        defer { isRefreshingChallenges = false }
+
+        do {
+            try await loadBootstrap()
+        } catch {
+            guard !shouldIgnore(error) else { return }
+            guard !silently else { return }
+            present(error)
+        }
+    }
+
+    func refreshSessionDataIfAuthenticated() async {
+        guard isAuthenticated else { return }
+
+        do {
+            try await loadBootstrap()
+        } catch {
+            guard !shouldIgnore(error) else { return }
+            present(error)
+        }
+    }
+
     @discardableResult
     func addActivity(
         category: ActivityCategory,
@@ -160,11 +204,11 @@ final class AppState: ObservableObject {
         shareToNews: Bool = true
     ) async -> Bool {
         guard media.contains(where: { $0.kind == .photo }) else {
-            alertMessage = "Добавь хотя бы одно фото, чтобы подтвердить активность."
+            showAlert(title: "Нужно фото", message: "Добавь хотя бы одно фото, чтобы подтвердить активность.")
             return false
         }
 
-        alertMessage = nil
+        clearAlert()
         isSubmittingActivity = true
         defer { isSubmittingActivity = false }
 
@@ -200,7 +244,7 @@ final class AppState: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty || !media.isEmpty else { return false }
 
-        alertMessage = nil
+        clearAlert()
         isPosting = true
         defer { isPosting = false }
 
@@ -215,11 +259,35 @@ final class AppState: ObservableObject {
     }
 
     @discardableResult
+    func reportPost(_ postID: String, reason: EcoPost.ReportReason) async -> Bool {
+        do {
+            try await apiClient.reportPost(id: postID, reason: reason)
+            showAlert(title: "Жалоба отправлена", message: "Мы проверим этот пост.")
+            return true
+        } catch {
+            present(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func deletePost(_ postID: String) async -> Bool {
+        do {
+            try await apiClient.deletePost(id: postID)
+            posts.removeAll { $0.id == postID }
+            return true
+        } catch {
+            present(error)
+            return false
+        }
+    }
+
+    @discardableResult
     func sendMessageToAI(_ text: String) async -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
 
-        alertMessage = nil
+        clearAlert()
         isSendingMessage = true
         defer { isSendingMessage = false }
 
@@ -235,7 +303,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func claimChallenge(_ challengeID: String) async -> Challenge? {
-        alertMessage = nil
+        clearAlert()
         isClaimingChallenge = true
         defer { isClaimingChallenge = false }
 
@@ -268,6 +336,7 @@ final class AppState: ObservableObject {
     private func clearSession() {
         isAuthenticated = false
         levelUpLevel = nil
+        clearAlert()
         user = UserProfile(
             fullName: "Пользователь",
             email: "user@ecoiz.app",
@@ -293,7 +362,35 @@ final class AppState: ObservableObject {
     }
 
     private func present(_ error: Error) {
-        alertMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        guard !shouldIgnore(error) else { return }
+        showAlert(
+            title: "Ошибка",
+            message: (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        )
+    }
+
+    private func showAlert(title: String, message: String) {
+        alertTitle = title
+        alertMessage = message
+    }
+
+    private func clearAlert() {
+        alertTitle = "Ошибка"
+        alertMessage = nil
+    }
+
+    private func shouldIgnore(_ error: Error) -> Bool {
+        if error is CancellationError {
+            return true
+        }
+
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            return true
+        }
+
+        let normalized = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return normalized == "cancelled"
     }
 
     private func updateUser(_ newUser: UserProfile, animateLevelUp: Bool) {
@@ -305,12 +402,26 @@ final class AppState: ObservableObject {
 
     private func sortChallenges(_ items: [Challenge]) -> [Challenge] {
         items.sorted { left, right in
+            let leftRank = challengeSortRank(for: left)
+            let rightRank = challengeSortRank(for: right)
+
+            if leftRank != rightRank {
+                return leftRank < rightRank
+            }
+
+            let leftStarted = hasStartedProgress(for: left)
+            let rightStarted = hasStartedProgress(for: right)
+            if leftStarted != rightStarted {
+                return leftStarted && !rightStarted
+            }
+
             let leftRemaining = remainingSteps(for: left)
             let rightRemaining = remainingSteps(for: right)
 
             if leftRemaining != rightRemaining {
                 return leftRemaining < rightRemaining
             }
+
             let leftProgress = challengeProgress(for: left)
             let rightProgress = challengeProgress(for: right)
             if leftProgress != rightProgress {
@@ -323,8 +434,19 @@ final class AppState: ObservableObject {
         }
     }
 
+    private func challengeSortRank(for challenge: Challenge) -> Int {
+        if challenge.isCompleted && !challenge.isClaimed {
+            return 0
+        }
+        return 1
+    }
+
     private func challengeProgress(for challenge: Challenge) -> Double {
         Double(min(challenge.currentCount, challenge.targetCount)) / Double(max(challenge.targetCount, 1))
+    }
+
+    private func hasStartedProgress(for challenge: Challenge) -> Bool {
+        challenge.currentCount > 0
     }
 
     private func remainingSteps(for challenge: Challenge) -> Int {

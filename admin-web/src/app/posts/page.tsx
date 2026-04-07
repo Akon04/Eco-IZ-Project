@@ -10,7 +10,7 @@ export default async function PostsPage() {
         Promise.resolve([]),
         Promise.resolve({
           totalPosts: 0,
-          flaggedPosts: 0,
+          needsReviewPosts: 0,
           hiddenPosts: 0,
           totalReports: 0,
         }),

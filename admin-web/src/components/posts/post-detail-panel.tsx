@@ -18,6 +18,8 @@ type PostDetailPanelProps = {
 };
 
 export function PostDetailPanel({ post }: PostDetailPanelProps) {
+  const moderatorPlaceholder =
+    "Оставь пустым, чтобы использовать стандартный текст модерации.";
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const detailQuery = useQuery({
@@ -37,7 +39,7 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
     resolver: zodResolver(postFormSchema),
     defaultValues: {
       state: post.state,
-      moderatorNote: "Действие модерации позже будет попадать в аудит-лог backend.",
+      moderatorNote: "",
     },
   });
 
@@ -86,10 +88,9 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
   useEffect(() => {
     reset({
       state: detailedPost.state,
-      moderatorNote:
-        "Действие модерации позже будет попадать в аудит-лог backend.",
+      moderatorNote: detailQuery.data?.moderatorNote ?? "",
     });
-  }, [detailedPost.state, post.id, reset]);
+  }, [detailQuery.data?.moderatorNote, detailedPost.state, post.id, reset]);
 
   function onSubmit(values: PostFormValues) {
     mutation.mutate(values);
@@ -145,6 +146,13 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
         </div>
       </div>
 
+      {(detailQuery.data?.reportReasons?.length ?? 0) > 0 ? (
+        <div className="card inset-card">
+          <p className="muted">Причины жалоб</p>
+          <p>{detailQuery.data?.reportReasons.join(" • ")}</p>
+        </div>
+      ) : null}
+
       <div className="card inset-card">
         <p className="muted">Содержимое поста</p>
         <p>{detailedPost.content || "У этого поста нет текста, только медиа."}</p>
@@ -170,7 +178,11 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
 
         <label className="field">
           <span>Заметка модератора</span>
-          <textarea rows={4} {...register("moderatorNote")} />
+          <textarea
+            rows={4}
+            placeholder={moderatorPlaceholder}
+            {...register("moderatorNote")}
+          />
           {errors.moderatorNote ? (
             <p className="field-error">{errors.moderatorNote.message}</p>
           ) : null}
@@ -215,8 +227,7 @@ export function PostDetailPanel({ post }: PostDetailPanelProps) {
             onClick={() =>
               reset({
                 state: detailedPost.state,
-                moderatorNote:
-                  "Действие модерации позже будет попадать в аудит-лог backend.",
+                moderatorNote: detailQuery.data?.moderatorNote ?? "",
               })
             }
             disabled={!isDirty}

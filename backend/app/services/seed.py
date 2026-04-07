@@ -71,12 +71,14 @@ def assign_challenges_for_user(db: Session, user: User, challenges: list[Challen
     if user.role != "USER":
         return
 
+    now = datetime.now(timezone.utc)
     unlocked_count = min(unlocked_challenge_count(user.points), len(challenges))
     order_map = {title: index for index, title in enumerate(CHALLENGE_UNLOCK_ORDER)}
     unlocked_challenges = sorted(challenges, key=lambda item: order_map.get(item.title, len(order_map)))[:unlocked_count]
     unlocked_ids = {challenge.id for challenge in unlocked_challenges}
     existing_items = db.scalars(select(UserChallenge).where(UserChallenge.user_id == user.id)).all()
     existing_by_challenge_id = {item.challenge_id: item for item in existing_items}
+    is_initial_unlock = len(existing_items) == 0
 
     for stale_item in existing_items:
         if stale_item.challenge_id not in unlocked_ids:
@@ -91,6 +93,7 @@ def assign_challenges_for_user(db: Session, user: User, challenges: list[Challen
                 challenge_id=challenge.id,
                 current_count=0,
                 is_completed=False,
+                unlocked_at=None if is_initial_unlock else now,
             )
         )
 
@@ -109,6 +112,7 @@ def _fetch_user_with_relations(db: Session, user_id) -> User | None:
 
 def ensure_seed_data(db: Session) -> None:
     last_activity_seed_date = (datetime.now(timezone.utc) - timedelta(days=1)).date()
+    now = datetime.now(timezone.utc)
 
     existing = db.scalar(select(User).where(User.email == "user@ecoiz.app"))
     if not existing:
@@ -182,21 +186,21 @@ def ensure_seed_data(db: Session) -> None:
         moderator.is_email_verified = True
 
     challenge_specs = [
-        ("7 эко-действий за неделю", "Добавь 7 любых экологичных активностей", 7, 60, "leaf.fill", 0x43B244, 0xEAF8DF),
-        ("3 дня без пластика", "Отмечай действия категории Пластик", 3, 40, "waterbottle.fill", 0x1AA5E6, 0xE7F5FF),
-        ("Эко-транспорт", "5 поездок пешком/велосипедом/метро", 5, 45, "figure.walk.circle.fill", 0xF09A00, 0xFFF5E2),
-        ("Водный баланс", "Добавь 4 активности по экономии воды", 4, 35, "drop.fill", 0x1AA5E6, 0xE7F5FF),
-        ("Энергия под контролем", "Сделай 6 действий из категории Энергия", 6, 55, "bolt.fill", 0xF5B100, 0xFFF4D6),
-        ("Неделя сортировки", "5 раз отсортируй отходы или сдай на переработку", 5, 50, "arrow.3.trianglepath.circle.fill", 0x43B244, 0xEAF8DF),
-        ("Эко-утро", "3 дня начинай день с полезной привычки", 3, 25, "sun.max.fill", 0xF6A623, 0xFFF0D9),
-        ("Чистый воздух", "4 раза выбери пешую прогулку вместо авто", 4, 40, "wind", 0x7BC6CC, 0xEAFBFC),
-        ("Многоразовый герой", "5 раз используй многоразовые вещи", 5, 45, "tray.full.fill", 0x5CB85C, 0xE6F7E6),
-        ("Осознанный шопинг", "3 раза откажись от лишней упаковки", 3, 30, "bag.fill", 0xC08B5C, 0xF8EEDF),
-        ("Эко-комьюнити", "Опубликуй 2 поста про экопривычки", 2, 20, "person.3.fill", 0x9B7BFF, 0xF1EBFF),
-        ("Зеленая неделя", "10 активностей за 7 дней", 10, 80, "calendar", 0x3FAE5A, 0xE6F7EA),
-        ("Ноль отходов", "4 дня подряд без одноразового пластика", 4, 55, "trash.slash.fill", 0x556B2F, 0xEEF5E1),
-        ("Дом без потерь", "5 привычек для дома и ресурсов", 5, 50, "house.fill", 0xE67E22, 0xFFF1E3),
-        ("Эко-мастер", "Собери 250 очков экопрогресса", 250, 120, "crown.fill", 0xD4AF37, 0xFFF8D9),
+        ("7 эко-действий за неделю", "Добавь 7 экологичных активностей за последние 7 дней.", 7, 60, "leaf.fill", 0x43B244, 0xEAF8DF),
+        ("3 дня без пластика", "Отметь 3 действия из категории Пластик и сократи одноразовые вещи.", 3, 40, "waterbottle.fill", 0x1AA5E6, 0xE7F5FF),
+        ("Эко-транспорт", "Выбери пешую прогулку, велосипед, самокат или общественный транспорт 5 раз.", 5, 45, "figure.walk.circle.fill", 0xF09A00, 0xFFF5E2),
+        ("Водный баланс", "Сделай 4 полезных действия из категории Вода.", 4, 35, "drop.fill", 0x1AA5E6, 0xE7F5FF),
+        ("Энергия под контролем", "Выполни 6 действий из категории Энергия.", 6, 55, "bolt.fill", 0xF5B100, 0xFFF4D6),
+        ("Неделя сортировки", "5 раз отсортируй отходы, сдай вторсырье или отправь органику в компост.", 5, 50, "arrow.3.trianglepath.circle.fill", 0x43B244, 0xEAF8DF),
+        ("Эко-утро", "3 дня подряд начинай утро с полезной экопривычки.", 3, 25, "sun.max.fill", 0xF6A623, 0xFFF0D9),
+        ("Чистый воздух", "4 раза выбери пешую прогулку вместо поездки на машине.", 4, 40, "wind", 0x7BC6CC, 0xEAFBFC),
+        ("Многоразовый герой", "5 раз используй многоразовые вещи, например сумку или бутылку.", 5, 45, "tray.full.fill", 0x5CB85C, 0xE6F7E6),
+        ("Осознанный шопинг", "3 раза откажись от лишней упаковки или одноразового пакета.", 3, 30, "bag.fill", 0xC08B5C, 0xF8EEDF),
+        ("Эко-комьюнити", "Опубликуй 2 поста о своих экопривычках и поделись примером с другими.", 2, 20, "person.3.fill", 0x9B7BFF, 0xF1EBFF),
+        ("Зеленая неделя", "Добавь 10 экологичных активностей за одну неделю.", 10, 80, "calendar", 0x3FAE5A, 0xE6F7EA),
+        ("Ноль отходов", "4 дня подряд обходись без одноразового пластика.", 4, 55, "trash.slash.fill", 0x556B2F, 0xEEF5E1),
+        ("Дом без потерь", "Выполни 5 домашних привычек, которые экономят ресурсы.", 5, 50, "house.fill", 0xE67E22, 0xFFF1E3),
+        ("Эко-мастер", "Набери 250 очков экопрогресса и дойди до уровня мастера.", 250, 120, "crown.fill", 0xD4AF37, 0xFFF8D9),
     ]
     challenges: list[Challenge] = []
     for title, description, target_count, reward_points, badge_symbol, badge_tint_hex, badge_background_hex in challenge_specs:
@@ -213,6 +217,13 @@ def ensure_seed_data(db: Session) -> None:
             )
             db.add(challenge)
             db.flush()
+        else:
+            challenge.description = description
+            challenge.target_count = target_count
+            challenge.reward_points = reward_points
+            challenge.badge_symbol = badge_symbol
+            challenge.badge_tint_hex = badge_tint_hex
+            challenge.badge_background_hex = badge_background_hex
         challenges.append(challenge)
 
     allowed_category_names = {name for name, *_ in FIXED_CATEGORY_SPECS}
@@ -295,7 +306,6 @@ def ensure_seed_data(db: Session) -> None:
                 0,
             )
 
-    now = datetime.now(timezone.utc)
     if not db.scalar(select(Activity).where(Activity.user_id == user.id)):
         db.add_all(
             [

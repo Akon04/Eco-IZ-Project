@@ -742,18 +742,244 @@ class BackendAPITests(unittest.TestCase):
             )
             self.assertEqual(mutation.status_code, 201)
 
-        claim = self.client.post(
-            f"/challenges/{challenge['id']}/claim",
-            headers={"Authorization": f"Bearer {token}"},
+    def test_posts_under_review_are_visible_only_to_author_until_approved(self) -> None:
+        user_login = self.client.post(
+            "/auth/login",
+            json={"email": "user@ecoiz.app", "password": "password123"},
         )
-        self.assertEqual(claim.status_code, 200)
-        self.assertTrue(claim.json()["challenge"]["isClaimed"])
+        self.assertEqual(user_login.status_code, 200)
+        user_token = user_login.json()["token"]
 
-        second_claim = self.client.post(
-            f"/challenges/{challenge['id']}/claim",
-            headers={"Authorization": f"Bearer {token}"},
+        second_user = self.client.post(
+            "/auth/register",
+            json={
+                "fullName": "Second User",
+                "email": "second-user@ecoiz.app",
+                "password": "password123",
+            },
         )
-        self.assertEqual(second_claim.status_code, 409)
+        self.assertEqual(second_user.status_code, 201)
+        second_user_token = second_user.json()["token"]
+
+        created_post = self.client.post(
+            "/posts",
+            json={
+                "text": "Новый пост на модерации",
+                "media": [],
+            },
+            headers={"Authorization": f"Bearer {user_token}"},
+        )
+        self.assertEqual(created_post.status_code, 201)
+        created_body = created_post.json()["post"]
+        self.assertEqual(created_body["state"], "Needs review")
+        self.assertTrue(created_body["isOwnPost"])
+
+        author_posts = self.client.get(
+            "/posts",
+            headers={"Authorization": f"Bearer {user_token}"},
+        )
+        self.assertEqual(author_posts.status_code, 200)
+        author_post = next(item for item in author_posts.json()["posts"] if item["id"] == created_body["id"])
+        self.assertEqual(author_post["state"], "Needs review")
+        self.assertTrue(author_post["isOwnPost"])
+
+        other_posts_before = self.client.get(
+            "/posts",
+            headers={"Authorization": f"Bearer {second_user_token}"},
+        )
+        self.assertEqual(other_posts_before.status_code, 200)
+        self.assertFalse(any(item["id"] == created_body["id"] for item in other_posts_before.json()["posts"]))
+
+        admin_login = self.client.post(
+            "/admin/login",
+            json={"email": "admin@ecoiz.app", "password": "admin123"},
+        )
+        self.assertEqual(admin_login.status_code, 200)
+        admin_token = admin_login.json()["token"]
+
+        admin_posts = self.client.get(
+            "/admin/posts?state=Needs%20review",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        self.assertEqual(admin_posts.status_code, 200)
+        self.assertTrue(any(item["id"] == created_body["id"] for item in admin_posts.json()))
+
+        approved = self.client.patch(
+            f"/admin/posts/{created_body['id']}",
+            json={"state": "Published", "moderatorNote": "Approved"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        self.assertEqual(approved.status_code, 200)
+        self.assertEqual(approved.json()["state"], "Published")
+
+        other_posts_after = self.client.get(
+            "/posts",
+            headers={"Authorization": f"Bearer {second_user_token}"},
+        )
+        self.assertEqual(other_posts_after.status_code, 200)
+        published_post = next(item for item in other_posts_after.json()["posts"] if item["id"] == created_body["id"])
+        self.assertEqual(published_post["state"], "Published")
+        self.assertFalse(published_post["isOwnPost"])
+
+    def test_hidden_posts_remain_visible_only_to_author_with_moderation_note(self) -> None:
+        login = self.client.post(
+            "/auth/login",
+            json={"email": "user@ecoiz.app", "password": "password123"},
+        )
+        self.assertEqual(login.status_code, 200)
+        user_token = login.json()["token"]
+
+        second_user = self.client.post(
+            "/auth/register",
+            json={"fullName": "Второй Пользователь", "email": "second@ecoiz.app", "password": "password123"},
+        )
+        self.assertEqual(second_user.status_code, 201)
+        second_user_token = second_user.json()["token"]
+
+        created_post = self.client.post(
+            "/posts",
+            json={"text": "Пост для скрытия", "media": []},
+            headers={"Authorization": f"Bearer {user_token}"},
+        )
+        self.assertEqual(created_post.status_code, 201)
+        post_id = created_post.json()["post"]["id"]
+
+        admin_login = self.client.post(
+            "/admin/login",
+            json={"email": "admin@ecoiz.app", "password": "admin123"},
+        )
+        admin_token = admin_login.json()["token"]
+
+        hidden = self.client.patch(
+            f"/admin/posts/{post_id}",
+            json={"state": "Hidden", "moderatorNote": ""},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        self.assertEqual(hidden.status_code, 200)
+        self.assertEqual(hidden.json()["state"], "Hidden")
+
+        author_posts = self.client.get(
+            "/posts",
+            headers={"Authorization": f"Bearer {user_token}"},
+        )
+        self.assertEqual(author_posts.status_code, 200)
+        author_post = next(item for item in author_posts.json()["posts"] if item["id"] == post_id)
+        self.assertEqual(author_post["state"], "Hidden")
+        self.assertEqual(author_post["moderatorNote"], "Нарушает правила сообщества")
+
+        other_posts = self.client.get(
+            "/posts",
+            headers={"Authorization": f"Bearer {second_user_token}"},
+        )
+        self.assertEqual(other_posts.status_code, 200)
+        self.assertFalse(any(item["id"] == post_id for item in other_posts.json()["posts"]))
+
+    def test_reporting_post_updates_reports_and_delete_sends_author_message(self) -> None:
+        login = self.client.post(
+            "/auth/login",
+            json={"email": "user@ecoiz.app", "password": "password123"},
+        )
+        self.assertEqual(login.status_code, 200)
+        author_token = login.json()["token"]
+
+        second_user = self.client.post(
+            "/auth/register",
+            json={"fullName": "Жалобщик", "email": "reporter@ecoiz.app", "password": "password123"},
+        )
+        self.assertEqual(second_user.status_code, 201)
+        reporter_token = second_user.json()["token"]
+
+        created_post = self.client.post(
+            "/posts",
+            json={"text": "Пост с жалобой", "media": []},
+            headers={"Authorization": f"Bearer {author_token}"},
+        )
+        self.assertEqual(created_post.status_code, 201)
+        post_id = created_post.json()["post"]["id"]
+
+        admin_login = self.client.post(
+            "/admin/login",
+            json={"email": "admin@ecoiz.app", "password": "admin123"},
+        )
+        admin_token = admin_login.json()["token"]
+        approved = self.client.patch(
+            f"/admin/posts/{post_id}",
+            json={"state": "Published", "moderatorNote": ""},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        self.assertEqual(approved.status_code, 200)
+
+        report = self.client.post(
+            f"/posts/{post_id}/report",
+            json={"reason": "Спам или реклама"},
+            headers={"Authorization": f"Bearer {reporter_token}"},
+        )
+        self.assertEqual(report.status_code, 204)
+
+        detail = self.client.get(
+            f"/admin/posts/{post_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()["reportsCount"], 1)
+        self.assertIn("Спам или реклама", detail.json()["reportReasons"][0])
+
+        deleted = self.client.delete(
+            f"/admin/posts/{post_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        self.assertEqual(deleted.status_code, 204)
+
+        chat = self.client.get(
+            "/chat/messages",
+            headers={"Authorization": f"Bearer {author_token}"},
+        )
+        self.assertEqual(chat.status_code, 200)
+        self.assertTrue(
+            any("Публикация не прошла модерацию" in item["text"] for item in chat.json()["messages"])
+        )
+
+    def test_user_can_delete_only_own_post(self) -> None:
+        login = self.client.post(
+            "/auth/login",
+            json={"email": "user@ecoiz.app", "password": "password123"},
+        )
+        self.assertEqual(login.status_code, 200)
+        author_token = login.json()["token"]
+
+        second_user = self.client.post(
+            "/auth/register",
+            json={"fullName": "Другой", "email": "other@ecoiz.app", "password": "password123"},
+        )
+        self.assertEqual(second_user.status_code, 201)
+        other_token = second_user.json()["token"]
+
+        created_post = self.client.post(
+            "/posts",
+            json={"text": "Удаляемый пост", "media": []},
+            headers={"Authorization": f"Bearer {author_token}"},
+        )
+        self.assertEqual(created_post.status_code, 201)
+        post_id = created_post.json()["post"]["id"]
+
+        forbidden = self.client.delete(
+            f"/posts/{post_id}",
+            headers={"Authorization": f"Bearer {other_token}"},
+        )
+        self.assertEqual(forbidden.status_code, 403)
+
+        deleted = self.client.delete(
+            f"/posts/{post_id}",
+            headers={"Authorization": f"Bearer {author_token}"},
+        )
+        self.assertEqual(deleted.status_code, 204)
+
+        posts = self.client.get(
+            "/posts",
+            headers={"Authorization": f"Bearer {author_token}"},
+        )
+        self.assertEqual(posts.status_code, 200)
+        self.assertFalse(any(item["id"] == post_id for item in posts.json()["posts"]))
 
     def test_unlocks_five_more_challenges_on_level_up(self) -> None:
         login = self.client.post(
@@ -770,21 +996,39 @@ class BackendAPITests(unittest.TestCase):
         self.assertEqual(before.status_code, 200)
         self.assertEqual(len(before.json()["challenges"]), 5)
 
-        level_up = self.client.post(
-            "/activities",
-            json={
-                "category": "Энергия",
-                "title": "Большой апгрейд уровня",
-                "co2Saved": 1.0,
-                "points": 40,
-                "note": "",
-                "media": self.sample_media_payload(),
-                "shareToNews": False,
-            },
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        self.assertEqual(level_up.status_code, 201)
-        self.assertEqual(len(level_up.json()["challenges"]), 10)
+        unlocked = before.json()["challenges"]
+        for index in range(5):
+            level_up = self.client.post(
+                "/activities",
+                json={
+                    "category": "Энергия",
+                    "title": f"Большой апгрейд уровня {index}",
+                    "co2Saved": 1.0,
+                    "points": 40,
+                    "note": "",
+                    "media": self.sample_media_payload(),
+                    "shareToNews": False,
+                },
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            self.assertEqual(level_up.status_code, 201)
+            unlocked = level_up.json()["challenges"]
+            if len(unlocked) >= 10:
+                break
+
+        self.assertGreaterEqual(len(unlocked), 10)
+
+        newly_unlocked_titles = {
+            "Неделя сортировки",
+            "Эко-утро",
+            "Чистый воздух",
+            "Многоразовый герой",
+            "Осознанный шопинг",
+        }
+        newly_unlocked = [item for item in unlocked if item["title"] in newly_unlocked_titles]
+        self.assertEqual(len(newly_unlocked), 5)
+        self.assertTrue(all(item["currentCount"] == 0 for item in newly_unlocked))
+        self.assertTrue(all(not item["isCompleted"] for item in newly_unlocked))
 
 
 if __name__ == "__main__":

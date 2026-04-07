@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var appState = AppState()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -41,9 +42,20 @@ struct ContentView: View {
         .task {
             await appState.restoreSessionIfNeeded()
         }
-        .alert("Ошибка", isPresented: Binding(
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task {
+                await appState.refreshSessionDataIfAuthenticated()
+            }
+        }
+        .alert(appState.alertTitle, isPresented: Binding(
             get: { appState.alertMessage != nil },
-            set: { if !$0 { appState.alertMessage = nil } }
+            set: {
+                if !$0 {
+                    appState.alertMessage = nil
+                    appState.alertTitle = "Ошибка"
+                }
+            }
         )) {
             Button("OK", role: .cancel) {}
         } message: {

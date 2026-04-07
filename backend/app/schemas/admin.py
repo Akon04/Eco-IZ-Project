@@ -213,6 +213,7 @@ class CommunityPostResponse(BaseModel):
 
 class CommunityPostDetailResponse(CommunityPostResponse):
     media: list[AdminMediaResponse]
+    reportReasons: list[str] = []
 
 
 class PostMetricsResponse(BaseModel):

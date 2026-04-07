@@ -451,9 +451,27 @@ struct PostMediaAttachment: Identifiable, Codable {
 }
 
 struct EcoPost: Identifiable, Decodable {
+    enum ModerationState: String {
+        case published = "Published"
+        case needsReview = "Needs review"
+        case hidden = "Hidden"
+    }
+
+    enum ReportReason: String, CaseIterable, Identifiable {
+        case spam = "Спам или реклама"
+        case dangerous = "Странные или опасные действия"
+        case abusive = "Оскорбительный контент"
+        case suspiciousUser = "Подозрительный пользователь"
+
+        var id: String { rawValue }
+    }
+
     let id: String
     let author: String
     let text: String
+    let state: ModerationState
+    let isOwnPost: Bool
+    let moderatorNote: String?
     let createdAt: Date
     let media: [PostMediaAttachment]
 
@@ -461,12 +479,18 @@ struct EcoPost: Identifiable, Decodable {
         id: String = UUID().uuidString,
         author: String,
         text: String,
+        state: ModerationState = .published,
+        isOwnPost: Bool = false,
+        moderatorNote: String? = nil,
         createdAt: Date,
         media: [PostMediaAttachment]
     ) {
         self.id = id
         self.author = author
         self.text = text
+        self.state = state
+        self.isOwnPost = isOwnPost
+        self.moderatorNote = moderatorNote
         self.createdAt = createdAt
         self.media = media
     }
@@ -478,6 +502,13 @@ struct EcoPost: Identifiable, Decodable {
         case username
         case text
         case content
+        case state
+        case moderationState
+        case moderation_state
+        case isOwnPost
+        case is_own_post
+        case moderatorNote
+        case moderator_note
         case createdAt
         case created_at
         case media
@@ -495,11 +526,32 @@ struct EcoPost: Identifiable, Decodable {
             try container.decodeIfPresent(String.self, forKey: .text)
             ?? container.decodeIfPresent(String.self, forKey: .content)
             ?? ""
+        let rawState =
+            try container.decodeIfPresent(String.self, forKey: .state)
+            ?? container.decodeIfPresent(String.self, forKey: .moderationState)
+            ?? container.decodeIfPresent(String.self, forKey: .moderation_state)
+            ?? ModerationState.published.rawValue
+        state = ModerationState(rawValue: rawState) ?? .published
+        isOwnPost =
+            try container.decodeIfPresent(Bool.self, forKey: .isOwnPost)
+            ?? container.decodeIfPresent(Bool.self, forKey: .is_own_post)
+            ?? false
+        moderatorNote =
+            try container.decodeIfPresent(String.self, forKey: .moderatorNote)
+            ?? container.decodeIfPresent(String.self, forKey: .moderator_note)
         createdAt =
             try container.decodeIfPresent(Date.self, forKey: .createdAt)
             ?? container.decodeIfPresent(Date.self, forKey: .created_at)
             ?? .now
         media = try container.decodeIfPresent([PostMediaAttachment].self, forKey: .media) ?? []
+    }
+
+    var isPendingReview: Bool {
+        isOwnPost && state == .needsReview
+    }
+
+    var isHiddenForAuthor: Bool {
+        isOwnPost && state == .hidden
     }
 }
 

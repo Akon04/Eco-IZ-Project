@@ -24,6 +24,10 @@ class PostCreateRequest(BaseModel):
     media: list[PostMediaResponse] = []
 
 
+class PostReportRequest(BaseModel):
+    reason: str
+
+
 class PostEnvelope(BaseModel):
     post: PostResponse
 

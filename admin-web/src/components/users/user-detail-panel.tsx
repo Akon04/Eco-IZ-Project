@@ -189,9 +189,13 @@ export function UserDetailPanel({ user }: UserDetailPanelProps) {
   const displayUser: AdminUser | AdminUserDetail = detail ?? user;
   const isModerator = currentStaff?.role === "MODERATOR";
   const canModerateSelectedUser = !isModerator || displayUser.role === "USER";
+  const challengeItems =
+    "challenges" in displayUser && Array.isArray(displayUser.challenges)
+      ? displayUser.challenges
+      : [];
   const sortedChallenges =
-    "challenges" in displayUser
-      ? [...displayUser.challenges].sort((left, right) => {
+    challengeItems.length > 0
+      ? [...challengeItems].sort((left, right) => {
           const leftPriority =
             left.isClaimed || left.isCompleted || left.currentCount > 0 ? 0 : 1;
           const rightPriority =
@@ -203,9 +207,7 @@ export function UserDetailPanel({ user }: UserDetailPanelProps) {
       : [];
 
   const completedChallenges =
-    "challenges" in displayUser
-      ? displayUser.challenges.filter((item) => item.isCompleted).length
-      : 0;
+    challengeItems.filter((item) => item.isCompleted).length;
 
   return (
     <article className="card">
@@ -282,8 +284,8 @@ export function UserDetailPanel({ user }: UserDetailPanelProps) {
             <div className="stat-chip">
               <span className="muted">Прогресс ачивок</span>
               <strong>
-                {"challenges" in displayUser
-                  ? `${completedChallenges}/${displayUser.challenges.length} завершено`
+                {challengeItems.length > 0
+                  ? `${completedChallenges}/${challengeItems.length} завершено`
                   : "Загрузка..."}
               </strong>
             </div>
@@ -328,8 +330,8 @@ export function UserDetailPanel({ user }: UserDetailPanelProps) {
           <p className="muted">Загружаем прогресс по ачивкам...</p>
         ) : !challengesExpanded ? (
           <p className="muted">
-            {"challenges" in displayUser
-              ? `${displayUser.challenges.length} скрыто`
+            {challengeItems.length > 0
+              ? `${challengeItems.length} скрыто`
               : "Разверни блок, чтобы увидеть прогресс."}
           </p>
         ) : "challenges" in displayUser && sortedChallenges.length > 0 ? (

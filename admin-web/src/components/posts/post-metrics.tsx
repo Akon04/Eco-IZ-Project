@@ -1,4 +1,5 @@
 import { MetricCards } from "@/components/metric-cards";
+import type { MetricCardItem } from "@/components/metric-cards";
 import type { PostMetrics } from "@/lib/types";
 
 type PostMetricsProps = {
@@ -6,18 +7,12 @@ type PostMetricsProps = {
 };
 
 export function PostMetricsCards({ metrics }: PostMetricsProps) {
-  const cards = [
+  const cards: MetricCardItem[] = [
     {
       label: "Всего постов",
       value: metrics.totalPosts ?? 0,
       note: "Текущий объем модерации",
       icon: "posts",
-    },
-    {
-      label: "Отмеченные",
-      value: metrics.flaggedPosts ?? 0,
-      note: "Проблемные публикации, уже отмеченные для модерации",
-      icon: "flagged",
     },
     {
       label: "Нужна проверка",
@@ -39,5 +34,5 @@ export function PostMetricsCards({ metrics }: PostMetricsProps) {
     },
   ];
 
-  return <MetricCards items={cards} columns="five" />;
+  return <MetricCards items={cards} columns="four" />;
 }

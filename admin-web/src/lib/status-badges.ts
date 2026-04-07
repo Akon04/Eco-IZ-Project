@@ -26,8 +26,6 @@ export function postStateBadgeClass(state: CommunityPost["state"]) {
   switch (state) {
     case "Published":
       return "pill pill-status pill-status-published";
-    case "Flagged":
-      return "pill pill-status pill-status-flagged";
     case "Needs review":
       return "pill pill-status pill-status-review";
     case "Hidden":

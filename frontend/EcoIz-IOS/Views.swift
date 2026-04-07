@@ -929,6 +929,7 @@ struct ChallengesView: View {
     @State private var celebratingChallenge: Challenge?
     @State private var isCelebrationVisible = false
     @State private var selectedChallengeHint: Challenge?
+    @State private var autoRefreshTask: Task<Void, Never>?
 
     private var visibleChallenges: [Challenge] {
         appState.challenges.filter { !$0.isClaimed }
@@ -1062,10 +1063,33 @@ struct ChallengesView: View {
                 }
             }
             .navigationBarHidden(true)
+            .task {
+                await appState.refreshChallengesIfAuthenticated(silently: true)
+                startAutoRefresh()
+            }
+            .onDisappear {
+                stopAutoRefresh()
+            }
             .sheet(item: $selectedChallengeHint) { challenge in
                 ChallengeHintSheet(challenge: challenge)
             }
         }
+    }
+
+    private func startAutoRefresh() {
+        autoRefreshTask?.cancel()
+        autoRefreshTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(8))
+                guard !Task.isCancelled else { break }
+                await appState.refreshChallengesIfAuthenticated(silently: true)
+            }
+        }
+    }
+
+    private func stopAutoRefresh() {
+        autoRefreshTask?.cancel()
+        autoRefreshTask = nil
     }
 }
 
@@ -1761,6 +1785,7 @@ struct NewsView: View {
     @State private var postText = ""
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var selectedMedia: [PostMediaAttachment] = []
+    @State private var autoRefreshTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -1809,9 +1834,19 @@ struct NewsView: View {
                         .padding(.horizontal)
                         .padding(.bottom, 80)
                     }
+                    .refreshable {
+                        await appState.refreshPostsIfAuthenticated()
+                    }
                 }
             }
             .navigationBarHidden(true)
+            .task {
+                await appState.refreshPostsIfAuthenticated()
+                startAutoRefresh()
+            }
+            .onDisappear {
+                stopAutoRefresh()
+            }
         }
         .onChange(of: pickerItems) { _, newItems in
             Task {
@@ -1839,6 +1874,22 @@ struct NewsView: View {
         await MainActor.run {
             selectedMedia = loaded
         }
+    }
+
+    private func startAutoRefresh() {
+        stopAutoRefresh()
+        autoRefreshTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(8))
+                guard !Task.isCancelled else { break }
+                await appState.refreshPostsIfAuthenticated()
+            }
+        }
+    }
+
+    private func stopAutoRefresh() {
+        autoRefreshTask?.cancel()
+        autoRefreshTask = nil
     }
 }
 
@@ -1915,8 +1966,10 @@ private struct ThreadComposerBar: View {
 }
 
 private struct ThreadPostCell: View {
+    @EnvironmentObject private var appState: AppState
     let post: EcoPost
     @State private var liked = false
+    @State private var showingDeleteConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1927,9 +1980,34 @@ private struct ThreadPostCell: View {
                         Text(post.author)
                             .font(EcoTypography.headline)
                         Spacer()
-                        Text(relativeTime(post.createdAt))
-                            .font(EcoTypography.caption)
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            moderationBadge
+                            if post.isOwnPost {
+                                Menu {
+                                    Button("Удалить пост", role: .destructive) {
+                                        showingDeleteConfirmation = true
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                            } else if post.state == .published {
+                                Menu {
+                                    ForEach(EcoPost.ReportReason.allCases) { reason in
+                                        Button(reason.rawValue) {
+                                            Task {
+                                                _ = await appState.reportPost(post.id, reason: reason)
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    Image(systemName: "exclamationmark.bubble")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
                     }
                     Text(handle(from: post.author))
                         .font(EcoTypography.caption)
@@ -1959,6 +2037,38 @@ private struct ThreadPostCell: View {
                 .padding(.leading, 50)
         }
         .padding(.vertical, 12)
+        .alert("Удалить этот пост?", isPresented: $showingDeleteConfirmation) {
+            Button("Отмена", role: .cancel) {}
+            Button("Удалить", role: .destructive) {
+                Task {
+                    _ = await appState.deletePost(post.id)
+                }
+            }
+        } message: {
+            Text("Пост исчезнет из вашей ленты.")
+        }
+    }
+
+    @ViewBuilder
+    private var moderationBadge: some View {
+        if post.isPendingReview {
+            HStack(spacing: 6) {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(EcoTheme.primary)
+                Text("В обработке")
+                    .font(EcoTypography.caption)
+                    .foregroundStyle(EcoTheme.primary)
+            }
+        } else if post.isHiddenForAuthor {
+            Text(post.moderatorNote ?? "Нарушает правила сообщества")
+                .font(EcoTypography.caption)
+                .foregroundStyle(Color.red.opacity(0.8))
+        } else {
+            Text(relativeTime(post.createdAt))
+                .font(EcoTypography.caption)
+                .foregroundStyle(.secondary)
+        }
     }
     private func handle(from name: String) -> String {
         let clean = name.lowercased().replacingOccurrences(of: " ", with: "")
@@ -2240,9 +2350,30 @@ struct ProfileView: View {
                                     .padding(.top, 4)
                             } else {
                                 HStack(spacing: 10) {
-                                    ForEach(profileAchievementPreview) { challenge in
-                                        ProfileAchievementMiniCard(challenge: challenge) {
-                                            selectedAchievement = challenge
+                                    ChallengesStatChip(
+                                        title: "Получено",
+                                        value: "\(completedChallengeAchievements.count)",
+                                        icon: "checkmark.seal.fill",
+                                        tint: Color(hex: 0x0A8E79)
+                                    )
+                                    ChallengesStatChip(
+                                        title: "Очки",
+                                        value: "+\(completedChallengeAchievements.reduce(0) { $0 + $1.rewardPoints })",
+                                        icon: "star.fill",
+                                        tint: Color(hex: 0xD89A00)
+                                    )
+                                }
+
+                                if profileAchievementPreview.count == 1, let challenge = profileAchievementPreview.first {
+                                    ProfileAchievementHeroCard(challenge: challenge) {
+                                        selectedAchievement = challenge
+                                    }
+                                } else {
+                                    HStack(spacing: 10) {
+                                        ForEach(profileAchievementPreview) { challenge in
+                                            ProfileAchievementMiniCard(challenge: challenge) {
+                                                selectedAchievement = challenge
+                                            }
                                         }
                                     }
                                 }
@@ -2575,22 +2706,72 @@ private struct ProfileAchievementMiniCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
-                AchievementBadgeView(challenge: challenge, size: 64)
+            VStack(alignment: .leading, spacing: 10) {
+                AchievementBadgeView(challenge: challenge, size: 60)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
                 Text(challenge.title)
-                    .font(EcoTypography.caption)
+                    .font(EcoTypography.subheadline)
+                    .fontWeight(.semibold)
                     .foregroundStyle(EcoTheme.ink)
-                    .multilineTextAlignment(.center)
+                    .multilineTextAlignment(.leading)
                     .lineLimit(2)
                     .minimumScaleFactor(0.82)
+
+                Text("+\(challenge.rewardPoints) очк.")
+                    .font(EcoTypography.caption)
+                    .foregroundStyle(Color(hex: challenge.badgeTintHex))
             }
-            .frame(maxWidth: .infinity, minHeight: 126, maxHeight: 126, alignment: .top)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 6)
+            .frame(maxWidth: .infinity, minHeight: 140, maxHeight: 140, alignment: .topLeading)
+            .padding(12)
             .background(Color.white.opacity(0.82), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color(hex: challenge.badgeTintHex).opacity(0.16), lineWidth: 1)
+                    .stroke(Color(hex: challenge.badgeTintHex).opacity(0.18), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct ProfileAchievementHeroCard: View {
+    let challenge: Challenge
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                AchievementBadgeView(challenge: challenge, size: 78)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Последняя ачивка")
+                        .font(EcoTypography.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text(challenge.title)
+                        .font(EcoTypography.headline)
+                        .foregroundStyle(EcoTheme.ink)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+
+                    HStack(spacing: 8) {
+                        PillBadge(
+                            icon: "star.fill",
+                            text: "+\(challenge.rewardPoints) очк.",
+                            foreground: Color(hex: challenge.badgeTintHex),
+                            background: Color(hex: challenge.badgeBackgroundHex)
+                        )
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.84), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color(hex: challenge.badgeTintHex).opacity(0.18), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -2886,33 +3067,54 @@ private struct ChallengeHintSheet: View {
 
     private var hintText: String {
         let title = challenge.title.lowercased()
-        let description = challenge.description.lowercased()
 
-        if title.contains("пластик") || description.contains("пластик") {
-            return "Выбери любую активность в категории «Пластик». Например: многоразовая бутылка, эко-сумка вместо пакета или отказ от одноразового пластика."
+        if title.contains("7 эко-действий") {
+            return "Добавь любые 7 активностей за последние 7 дней. Подойдут все категории: вода, энергия, транспорт, пластик и отходы."
         }
-        if title.contains("транспорт") || description.contains("пешком") || description.contains("велосип") || description.contains("метро") {
-            return "Выбери любую активность в категории «Транспорт». Например: пешая прогулка, велосипед, метро или другой экологичный способ передвижения."
+        if title.contains("3 дня без пластика") {
+            return "Тебе нужно 3 раза отметить действия из категории «Пластик», например многоразовую бутылку, сумку или отказ от пакета."
         }
-        if title.contains("вод") || description.contains("вод") {
-            return "Выбери любую активность в категории «Вода». Например: короткий душ, закрывать кран во время чистки зубов или другая привычка на экономию воды."
+        if title.contains("эко-транспорт") {
+            return "Засчитываются экологичные поездки: пешком, велосипед, самокат, метро или общественный транспорт. Нужно выполнить 5 таких действий."
         }
-        if title.contains("энерг") || description.contains("энерг") {
-            return "Выбери любую активность в категории «Энергия». Например: выключать лишний свет, отключать зарядку из розетки или использовать энергосберегающую привычку."
+        if title.contains("водный баланс") {
+            return "Выбирай действия из категории «Вода»: короткий душ, закрытый кран, полная загрузка стирки и другие привычки на экономию воды. Нужно 4 действия."
         }
-        if title.contains("сортиров") || title.contains("отход") || description.contains("переработ") {
-            return "Выбери любую активность по отходам и переработке. Например: сортировка бумаги, сдача пластика на переработку или отказ от лишнего мусора."
+        if title.contains("энергия под контролем") {
+            return "Выполняй действия из категории «Энергия»: выключай свет, отключай приборы из сети, используй LED-лампы. Нужно 6 действий."
         }
-        if title.contains("шопинг") || description.contains("упаков") || title.contains("покуп") {
-            return "Выбери любую активность из осознанных покупок. Например: товар без лишней упаковки, локальные продукты или многоразовые вещи."
+        if title.contains("неделя сортировки") {
+            return "Засчитываются действия по отходам: сортировка, сдача вторсырья и компост. Нужно сделать это 5 раз."
         }
-        if title.contains("комьюнити") || description.contains("пост") {
-            return "Для этого челленджа нужно делиться в ленте. Добавь пост в разделе новостей о своей экопривычке или результате."
+        if title.contains("эко-утро") {
+            return "Этот челлендж считается по утренним экопривычкам. Подойдут утренние действия вроде короткого душа, выключенного света, отказа от пластика или пешей прогулки. Нужно выполнить 3 таких действия."
         }
-        if title.contains("эко-мастер") || description.contains("очков") {
-            return "Для этого челленджа просто продолжай выполнять любые активности. Очки суммируются, и когда дойдешь до нужного числа, челлендж откроется."
+        if title.contains("чистый воздух") {
+            return "Здесь считаются именно пешие прогулки вместо машины. Выбирай активность «Пешая прогулка» и выполни её 4 раза."
         }
-        return "Открой подходящую категорию и выбери любую активность, которая соответствует описанию челленджа. Подойдут любые действия по теме этого задания."
+        if title.contains("многоразовый герой") {
+            return "Используй многоразовые вещи: сумку, бутылку, контейнер или похожую привычку. Нужно 5 таких действий."
+        }
+        if title.contains("осознанный шопинг") {
+            return "Покупай без лишней упаковки или отказывайся от одноразового пакета. Нужно выполнить 3 таких действия."
+        }
+        if title.contains("эко-комьюнити") {
+            return "Для этой ачивки нужно опубликовать 2 поста о своих экопривычках или результатах в ленте."
+        }
+        if title.contains("зеленая неделя") {
+            return "Добавь 10 любых экологичных активностей за 7 дней. Считаются все категории."
+        }
+        if title.contains("ноль отходов") {
+            return "Нужно 4 раза выполнить действия без одноразового пластика и лишнего мусора, например эко-сумка, бутылка или сортировка."
+        }
+        if title.contains("дом без потерь") {
+            return "Здесь считаются домашние привычки на экономию воды, энергии и ресурсов. Нужно 5 таких действий."
+        }
+        if title.contains("эко-мастер") {
+            return "Просто продолжай выполнять активности и копить очки. Когда наберёшь 250 очков экопрогресса, ачивка закроется."
+        }
+
+        return challenge.description
     }
 
     var body: some View {

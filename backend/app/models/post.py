@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -26,6 +26,7 @@ class Post(Base):
 
     user: Mapped["User"] = relationship(back_populates="posts")
     media: Mapped[list["PostMedia"]] = relationship(back_populates="post", cascade="all, delete-orphan")
+    reports: Mapped[list["PostReport"]] = relationship(back_populates="post", cascade="all, delete-orphan")
 
 
 class PostMedia(Base):
@@ -37,6 +38,19 @@ class PostMedia(Base):
     data: Mapped[bytes] = mapped_column(LargeBinary)
 
     post: Mapped["Post"] = relationship(back_populates="media")
+
+
+class PostReport(Base):
+    __tablename__ = "post_reports"
+    __table_args__ = (UniqueConstraint("post_id", "user_id", name="uq_post_reports_post_user"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    post_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    reason: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+    post: Mapped["Post"] = relationship(back_populates="reports")
 
 
 from app.models.user import User  # noqa: E402

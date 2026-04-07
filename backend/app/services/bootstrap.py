@@ -1,7 +1,7 @@
 import base64
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_, select
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.chat import ChatMessage
 from app.models.challenge import Challenge
@@ -46,11 +46,7 @@ def user_level(points: int) -> str:
 
 
 def unlocked_challenge_count(points: int) -> int:
-    if points < 120:
-        return 5
-    if points < 320:
-        return 10
-    return 15
+    return max(user_level_number(points), 1) * 5
 
 
 def challenge_sort_key(challenge: Challenge) -> tuple[int, str]:
@@ -116,14 +112,33 @@ def serialize_activity_media(item: ActivityMedia) -> PostMediaResponse:
     )
 
 
-def serialize_post(post: Post) -> PostResponse:
+def serialize_post(post: Post, viewer_id=None) -> PostResponse:
     return PostResponse(
         id=str(post.id),
         author=post.author_name,
         text=post.text,
+        state=post.moderation_state,
+        isOwnPost=viewer_id is not None and post.user_id == viewer_id,
+        moderatorNote=post.moderator_note,
         createdAt=post.created_at,
         media=[serialize_media(media) for media in post.media],
     )
+
+
+def visible_posts_for_user(db: Session, user: User) -> list[Post]:
+    stmt = (
+        select(Post)
+        .options(selectinload(Post.media))
+        .where(
+            or_(
+                and_(Post.visibility == "PUBLIC", Post.moderation_state == "Published"),
+                and_(Post.user_id == user.id, Post.moderation_state == "Needs review"),
+                and_(Post.user_id == user.id, Post.moderation_state == "Hidden"),
+            )
+        )
+        .order_by(Post.created_at.desc())
+    )
+    return db.scalars(stmt).all()
 
 
 def serialize_chat_message(message: ChatMessage) -> ChatMessageResponse:
@@ -160,7 +175,7 @@ def build_bootstrap(user: User, db: Session) -> BootstrapResponse:
         user=serialize_user(user),
         activities=[serialize_activity(item) for item in sorted(user.activities, key=lambda value: value.created_at, reverse=True)],
         challenges=[serialize_user_challenge(item) for item in user.user_challenges],
-        posts=[serialize_post(item) for item in sorted(user.posts, key=lambda value: value.created_at, reverse=True)],
+        posts=[serialize_post(item, viewer_id=user.id) for item in visible_posts_for_user(db, user)],
         chatMessages=[serialize_chat_message(item) for item in sorted(user.chat_messages, key=lambda value: value.created_at)],
         communityImpact=serialize_community_impact(db),
     )

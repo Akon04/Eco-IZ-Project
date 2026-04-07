@@ -177,6 +177,10 @@ private struct PostRequest: Encodable {
     let media: [PostMediaAttachment]
 }
 
+private struct PostReportRequest: Encodable {
+    let reason: String
+}
+
 private struct ChatRequest: Encodable {
     let text: String
 }
@@ -272,6 +276,23 @@ final class APIClient {
         return response.post
     }
 
+    func reportPost(id: String, reason: EcoPost.ReportReason) async throws {
+        let _: EmptyResponse = try await request(
+            path: "/posts/\(id)/report",
+            method: "POST",
+            body: PostReportRequest(reason: reason.rawValue),
+            requiresAuth: true
+        )
+    }
+
+    func deletePost(id: String) async throws {
+        let _: EmptyResponse = try await request(
+            path: "/posts/\(id)",
+            method: "DELETE",
+            requiresAuth: true
+        )
+    }
+
     func sendMessage(_ text: String) async throws -> [ChatMessage] {
         let response: ChatEnvelope = try await request(
             path: "/chat/messages",
@@ -342,6 +363,10 @@ final class APIClient {
                 throw APIError.server(rawBody)
             }
             throw APIError.invalidResponse()
+        }
+
+        if data.isEmpty, Response.self == EmptyResponse.self {
+            return EmptyResponse() as! Response
         }
 
         do {
@@ -470,6 +495,8 @@ final class APIClient {
         return path.isEmpty ? "корневом объекте" : path
     }
 }
+
+private struct EmptyResponse: Decodable {}
 
 enum DateParsing {
     static let iso8601WithFractional: ISO8601DateFormatter = {

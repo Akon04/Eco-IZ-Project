@@ -1,6 +1,6 @@
 import { AdminIcon } from "@/components/ui/admin-icon";
 
-type MetricCardItem = {
+export type MetricCardItem = {
   label: string;
   value: string | number;
   note: string;

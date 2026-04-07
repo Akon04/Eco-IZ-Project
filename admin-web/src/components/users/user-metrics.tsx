@@ -1,4 +1,5 @@
 import { MetricCards } from "@/components/metric-cards";
+import type { MetricCardItem } from "@/components/metric-cards";
 import type { UserMetrics } from "@/lib/types";
 
 type UserMetricsProps = {
@@ -6,7 +7,7 @@ type UserMetricsProps = {
 };
 
 export function UserMetricsCards({ metrics }: UserMetricsProps) {
-  const cards = [
+  const cards: MetricCardItem[] = [
     {
       label: "Всего пользователей",
       value: metrics.totalUsers,

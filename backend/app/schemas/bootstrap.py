@@ -50,6 +50,9 @@ class PostResponse(BaseModel):
     id: str
     author: str
     text: str
+    state: str = "Published"
+    isOwnPost: bool = False
+    moderatorNote: str | None = None
     createdAt: datetime
     media: list[PostMediaResponse]
 

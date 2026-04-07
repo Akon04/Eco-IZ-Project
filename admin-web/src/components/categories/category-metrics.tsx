@@ -1,4 +1,5 @@
 import { MetricCards } from "@/components/metric-cards";
+import type { MetricCardItem } from "@/components/metric-cards";
 import type { CategoryMetrics } from "@/lib/types";
 
 type CategoryMetricsProps = {
@@ -6,7 +7,7 @@ type CategoryMetricsProps = {
 };
 
 export function CategoryMetricsCards({ metrics }: CategoryMetricsProps) {
-  const cards = [
+  const cards: MetricCardItem[] = [
     {
       label: "Всего категорий",
       value: metrics.totalCategories,

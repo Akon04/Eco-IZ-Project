@@ -12,31 +12,15 @@ type PostTableProps = {
 const stateOptions: Array<CommunityPost["state"] | "ALL"> = [
   "ALL",
   "Published",
-  "Flagged",
   "Needs review",
   "Hidden",
-];
-
-const visibilityOptions: Array<CommunityPost["visibility"] | "ALL"> = [
-  "ALL",
-  "PUBLIC",
-  "FOLLOWERS",
-  "PRIVATE",
 ];
 
 const stateLabels: Record<CommunityPost["state"] | "ALL", string> = {
   ALL: "Все статусы",
   Published: "Опубликован",
-  Flagged: "Отмечен",
   "Needs review": "Нужна проверка",
   Hidden: "Скрыт",
-};
-
-const visibilityLabels: Record<CommunityPost["visibility"] | "ALL", string> = {
-  ALL: "Вся видимость",
-  PUBLIC: "Публичный",
-  FOLLOWERS: "Подписчики",
-  PRIVATE: "Приватный",
 };
 
 export function PostTable({
@@ -89,26 +73,6 @@ export function PostTable({
                 ))}
               </select>
             </label>
-            <label className="inline-field">
-              <span className="sr-only">Фильтр по видимости</span>
-              <select
-                value={filters.visibility ?? "ALL"}
-                onChange={(event) =>
-                  onFilterChange({
-                    ...filters,
-                    visibility: event.target.value as
-                      | CommunityPost["visibility"]
-                      | "ALL",
-                  })
-                }
-              >
-                {visibilityOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {visibilityLabels[option]}
-                  </option>
-                ))}
-              </select>
-            </label>
           </div>
         </div>
       </div>
@@ -118,7 +82,6 @@ export function PostTable({
           <thead>
             <tr>
               <th>Автор</th>
-              <th>Видимость</th>
               <th>Статус</th>
               <th>Жалобы</th>
               <th>Создан</th>
@@ -132,7 +95,6 @@ export function PostTable({
                 onClick={() => onSelect(post.id)}
               >
                 <td>{post.author}</td>
-                <td>{visibilityLabels[post.visibility]}</td>
                 <td>
                   <span className={postStateBadgeClass(post.state)}>
                     {stateLabels[post.state]}

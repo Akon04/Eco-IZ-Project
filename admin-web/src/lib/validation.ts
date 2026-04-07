@@ -44,11 +44,11 @@ export const achievementFormSchema = z.object({
 });
 
 export const postFormSchema = z.object({
-  visibility: z.enum(["PUBLIC", "FOLLOWERS", "PRIVATE"]),
-  state: z.enum(["Published", "Flagged", "Needs review", "Hidden"]),
-  moderatorNote: z
-    .string()
-    .min(8, "Заметка модератора должна содержать минимум 8 символов."),
+  state: z.enum(["Published", "Needs review", "Hidden"]),
+  moderatorNote: z.string().refine(
+    (value) => value.trim().length === 0 || value.trim().length >= 8,
+    "Заметка модератора должна содержать минимум 8 символов.",
+  ),
 });
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
