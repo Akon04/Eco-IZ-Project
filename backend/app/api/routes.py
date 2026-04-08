@@ -1108,6 +1108,7 @@ def delete_achievement(
 def admin_posts(
     search: str | None = None,
     state: str | None = None,
+    reports: str | None = None,
     _: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ) -> list[CommunityPostResponse]:
@@ -1117,6 +1118,10 @@ def admin_posts(
         stmt = stmt.where((Post.author_name.ilike(pattern)) | (Post.text.ilike(pattern)))
     if state:
         stmt = stmt.where(Post.moderation_state == state)
+    if reports == "REPORTED":
+        stmt = stmt.where(Post.reports_count > 0)
+    elif reports == "NO_REPORTS":
+        stmt = stmt.where(Post.reports_count == 0)
     return [serialize_admin_post(item) for item in db.scalars(stmt).all()]
 
 

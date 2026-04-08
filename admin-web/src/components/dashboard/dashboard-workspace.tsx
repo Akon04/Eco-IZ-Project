@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { EcoAnalyticsPanel } from "@/components/dashboard/eco-analytics-panel";
-import { MetricCards } from "@/components/metric-cards";
 import { StatePanel } from "@/components/state-panel";
 import { getAchievementMetrics, listAchievements } from "@/lib/api/achievements";
 import { getEcoAnalytics } from "@/lib/api/dashboard";
@@ -182,29 +181,6 @@ export function DashboardWorkspace({
     );
   }
 
-  const topMetrics = [
-    {
-      label: "Пользователи",
-      value: String(userMetrics.totalUsers),
-      note: `${userMetrics.verifiedCount} подтверждено, ${userMetrics.needsReview} на проверке`,
-    },
-    {
-      label: "Каталог активностей",
-      value: String(habitMetrics.totalHabits),
-      note: `${habitMetrics.categoriesUsed} категорий, ${habitMetrics.totalPoints} баллов`,
-    },
-    {
-      label: "Посты на модерации",
-      value: String(posts.filter((post) => post.state === "Needs review").length),
-      note: `${postMetrics.needsReviewPosts} ждут проверки, ${postMetrics.totalReports} жалоб`,
-    },
-    {
-      label: "Ачивки",
-      value: String(achievementMetrics.totalAchievements),
-      note: `${achievementMetrics.totalRewardPoints} баллов награды в каталоге`,
-    },
-  ];
-
   const moderationQueue = posts
     .filter((post) => post.state === "Needs review")
     .map((post) => ({
@@ -254,8 +230,6 @@ export function DashboardWorkspace({
           tone="warning"
         />
       ) : null}
-
-      <MetricCards items={topMetrics} columns="four" />
 
       <section className="split" style={{ marginTop: 16 }}>
         <article className="card">

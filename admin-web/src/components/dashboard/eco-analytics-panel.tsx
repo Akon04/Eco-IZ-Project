@@ -66,19 +66,18 @@ export function EcoAnalyticsPanel({ analytics }: EcoAnalyticsPanelProps) {
       <div className="grid" style={{ gap: 16 }}>
         <section className="grid grid-three">
           <article className="card eco-kpi-card">
-            <p className="muted">Самая популярная категория</p>
-            <p className="metric" style={{ fontSize: 30 }}>{analytics.topCategory || "Нет данных"}</p>
-            <p className="muted">Лидирует по числу записанных активностей.</p>
+            <p className="muted eco-kpi-label">Самая популярная категория</p>
+            <p className="metric eco-kpi-value eco-kpi-value-text">
+              {analytics.topCategory || "Нет данных"}
+            </p>
           </article>
           <article className="card eco-kpi-card">
-            <p className="muted">Своя активность</p>
-            <p className="metric">{analytics.customActivitiesCount}</p>
-            <p className="muted">Сколько раз пользователи выбрали custom-сценарий.</p>
+            <p className="muted eco-kpi-label">Своя активность</p>
+            <p className="metric eco-kpi-value">{analytics.customActivitiesCount}</p>
           </article>
           <article className="card eco-kpi-card">
-            <p className="muted">Средний CO2 / активность</p>
-            <p className="metric">{analytics.averageCo2PerActivity.toFixed(2)}</p>
-            <p className="muted">Среднее eco-влияние на одну активность.</p>
+            <p className="muted eco-kpi-label">Средний CO2 / активность</p>
+            <p className="metric eco-kpi-value">{analytics.averageCo2PerActivity.toFixed(2)}</p>
           </article>
         </section>
 

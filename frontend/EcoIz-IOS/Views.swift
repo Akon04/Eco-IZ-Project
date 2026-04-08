@@ -2009,9 +2009,10 @@ private struct ThreadPostCell: View {
                             }
                         }
                     }
-                    Text(handle(from: post.author))
+                    Text(handle(from: post.username))
                         .font(EcoTypography.caption)
                         .foregroundStyle(.secondary)
+
                     Text(post.text)
                         .font(EcoTypography.body)
                         .foregroundStyle(EcoTheme.ink)
@@ -2036,6 +2037,7 @@ private struct ThreadPostCell: View {
             Divider()
                 .padding(.leading, 50)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 12)
         .alert("Удалить этот пост?", isPresented: $showingDeleteConfirmation) {
             Button("Отмена", role: .cancel) {}
@@ -2061,7 +2063,7 @@ private struct ThreadPostCell: View {
                     .foregroundStyle(EcoTheme.primary)
             }
         } else if post.isHiddenForAuthor {
-            Text(post.moderatorNote ?? "Нарушает правила сообщества")
+            Text(hiddenPostMessage)
                 .font(EcoTypography.caption)
                 .foregroundStyle(Color.red.opacity(0.8))
         } else {
@@ -2070,9 +2072,24 @@ private struct ThreadPostCell: View {
                 .foregroundStyle(.secondary)
         }
     }
-    private func handle(from name: String) -> String {
-        let clean = name.lowercased().replacingOccurrences(of: " ", with: "")
-        return "@\(clean)"
+
+    private var hiddenPostMessage: String {
+        let rawNote = post.moderatorNote?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let note = rawNote, !note.isEmpty else {
+            return "Нарушает правила сообщества"
+        }
+        if note == "Действие модерации позже будет попадать в аудит-лог backend." {
+            return "Нарушает правила сообщества"
+        }
+        return note
+    }
+
+    private func handle(from username: String) -> String {
+        let clean = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean.hasPrefix("@") {
+            return clean
+        }
+        return "@\(clean.lowercased())"
     }
 
     private func relativeTime(_ date: Date) -> String {
@@ -2117,17 +2134,59 @@ private struct ThreadMediaStrip: View {
 private struct ThreadMediaGrid: View {
     let media: [PostMediaAttachment]
 
-    private var columns: [GridItem] {
-        media.count == 1
-            ? [GridItem(.flexible())]
-            : [GridItem(.flexible()), GridItem(.flexible())]
+    var body: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let halfWidth = max((width - 8) / 2, 0)
+
+            Group {
+                switch media.count {
+                case 0:
+                    EmptyView()
+                case 1:
+                    ThreadMediaThumbnail(item: media[0], height: 220)
+                case 2:
+                    mediaRow(media[0], media[1], width: halfWidth, height: 160)
+                case 3:
+                    VStack(spacing: 8) {
+                        ThreadMediaThumbnail(item: media[0], height: 190)
+                        mediaRow(media[1], media[2], width: halfWidth, height: 128)
+                    }
+                default:
+                    LazyVGrid(columns: [GridItem(.fixed(halfWidth), spacing: 8), GridItem(.fixed(halfWidth), spacing: 8)], spacing: 8) {
+                        ForEach(Array(media.prefix(4))) { item in
+                            ThreadMediaThumbnail(item: item, height: 130)
+                                .frame(width: halfWidth)
+                        }
+                    }
+                }
+            }
+            .frame(width: width, alignment: .leading)
+        }
+        .frame(height: gridHeight)
     }
 
-    var body: some View {
-        LazyVGrid(columns: columns, spacing: 8) {
-            ForEach(media) { item in
-                ThreadMediaThumbnail(item: item, height: media.count == 1 ? 220 : 130)
-            }
+    private var gridHeight: CGFloat {
+        switch media.count {
+        case 0:
+            return 0
+        case 1:
+            return 220
+        case 2:
+            return 160
+        case 3:
+            return 326
+        default:
+            return 268
+        }
+    }
+
+    private func mediaRow(_ leading: PostMediaAttachment, _ trailing: PostMediaAttachment, width: CGFloat, height: CGFloat) -> some View {
+        HStack(spacing: 8) {
+            ThreadMediaThumbnail(item: leading, height: height)
+                .frame(width: width)
+            ThreadMediaThumbnail(item: trailing, height: height)
+                .frame(width: width)
         }
     }
 }

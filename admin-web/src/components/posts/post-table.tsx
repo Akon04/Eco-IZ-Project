@@ -23,6 +23,18 @@ const stateLabels: Record<CommunityPost["state"] | "ALL", string> = {
   Hidden: "Скрыт",
 };
 
+const reportsOptions: Array<NonNullable<PostFilters["reports"]>> = [
+  "ALL",
+  "REPORTED",
+  "NO_REPORTS",
+];
+
+const reportsLabels: Record<NonNullable<PostFilters["reports"]>, string> = {
+  ALL: "Все жалобы",
+  REPORTED: "С жалобами",
+  NO_REPORTS: "Без жалоб",
+};
+
 export function PostTable({
   posts,
   selectedPostId,
@@ -69,6 +81,24 @@ export function PostTable({
                 {stateOptions.map((option) => (
                   <option key={option} value={option}>
                     {stateLabels[option]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="inline-field">
+              <span className="sr-only">Фильтр по жалобам</span>
+              <select
+                value={filters.reports ?? "ALL"}
+                onChange={(event) =>
+                  onFilterChange({
+                    ...filters,
+                    reports: event.target.value as NonNullable<PostFilters["reports"]>,
+                  })
+                }
+              >
+                {reportsOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {reportsLabels[option]}
                   </option>
                 ))}
               </select>

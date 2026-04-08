@@ -19,6 +19,9 @@ export async function listPosts(
     if (filters.state && filters.state !== "ALL") {
       params.set("state", filters.state);
     }
+    if (filters.reports && filters.reports !== "ALL") {
+      params.set("reports", filters.reports);
+    }
 
     return apiRequest<CommunityPost[]>(
       `/admin/posts${params.size ? `?${params.toString()}` : ""}`,
@@ -35,8 +38,13 @@ export async function listPosts(
       post.content.toLowerCase().includes(query);
     const matchesState =
       !filters.state || filters.state === "ALL" || post.state === filters.state;
+    const matchesReports =
+      !filters.reports ||
+      filters.reports === "ALL" ||
+      (filters.reports === "REPORTED" && post.reportsCount > 0) ||
+      (filters.reports === "NO_REPORTS" && post.reportsCount === 0);
 
-    return matchesSearch && matchesState;
+    return matchesSearch && matchesState && matchesReports;
   });
 }
 

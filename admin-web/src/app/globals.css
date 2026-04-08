@@ -316,8 +316,13 @@ textarea {
 
 .metric-card {
   min-height: 224px;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 46px minmax(52px, auto) minmax(52px, auto) minmax(56px, auto);
+  align-content: start;
+  justify-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 24px 22px;
 }
 
 .inset-card {
@@ -369,7 +374,7 @@ textarea {
   width: 46px;
   height: 46px;
   border-radius: 16px;
-  margin-bottom: 14px;
+  margin: 0;
   border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
@@ -431,15 +436,22 @@ textarea {
 }
 
 .metric-card .metric {
-  margin: 10px 0 12px;
+  margin: 0;
   font-size: clamp(40px, 4vw, 52px);
   line-height: 0.95;
   letter-spacing: -0.05em;
 }
 
+.metric-card .muted {
+  margin: 0;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .metric-card .muted:last-child {
   max-width: 23ch;
   line-height: 1.35;
+  align-self: start;
 }
 
 .muted {
@@ -728,6 +740,86 @@ tbody tr:hover {
   gap: 12px;
 }
 
+.eco-analytics-layout {
+  grid-template-columns: 1.15fr 1fr;
+}
+
+.eco-bars {
+  display: grid;
+  gap: 14px;
+}
+
+.eco-bar-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.eco-bar-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.eco-bar-head p {
+  margin: 4px 0 0;
+}
+
+.eco-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.eco-bar-track {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(223, 245, 209, 0.7);
+  overflow: hidden;
+}
+
+.eco-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.eco-kpi-card {
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  padding: 28px 24px;
+}
+
+.eco-kpi-label {
+  margin: 0;
+  max-width: 180px;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.eco-kpi-value {
+  margin: 0;
+  font-size: clamp(44px, 4vw, 56px);
+  line-height: 1;
+}
+
+.eco-kpi-value-text {
+  max-width: 100%;
+  font-size: clamp(22px, 1.9vw, 30px);
+  line-height: 1.15;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
 .stat-chip {
   display: grid;
   gap: 6px;
@@ -985,7 +1077,8 @@ tbody tr:hover {
   .grid.cards,
   .grid.grid-three,
   .grid.grid-five,
-  .split {
+  .split,
+  .eco-analytics-layout {
     grid-template-columns: 1fr;
   }
 

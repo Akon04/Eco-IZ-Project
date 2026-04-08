@@ -116,10 +116,12 @@ def serialize_post(post: Post, viewer_id=None) -> PostResponse:
     return PostResponse(
         id=str(post.id),
         author=post.author_name,
+        username=post.user.username,
         text=post.text,
         state=post.moderation_state,
         isOwnPost=viewer_id is not None and post.user_id == viewer_id,
         moderatorNote=post.moderator_note,
+        moderationState=post.moderation_state,
         createdAt=post.created_at,
         media=[serialize_media(media) for media in post.media],
     )
@@ -128,7 +130,7 @@ def serialize_post(post: Post, viewer_id=None) -> PostResponse:
 def visible_posts_for_user(db: Session, user: User) -> list[Post]:
     stmt = (
         select(Post)
-        .options(selectinload(Post.media))
+        .options(selectinload(Post.media), selectinload(Post.user))
         .where(
             or_(
                 and_(Post.visibility == "PUBLIC", Post.moderation_state == "Published"),

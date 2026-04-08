@@ -234,6 +234,7 @@ export type CommunityPostDetail = CommunityPost & {
 export type PostFilters = {
   search?: string;
   state?: CommunityPost["state"] | "ALL";
+  reports?: "ALL" | "REPORTED" | "NO_REPORTS";
 };
 
 export type UpdatePostPayload = {

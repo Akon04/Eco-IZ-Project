@@ -451,10 +451,21 @@ struct PostMediaAttachment: Identifiable, Codable {
 }
 
 struct EcoPost: Identifiable, Decodable {
-    enum ModerationState: String {
+    enum ModerationState: String, Decodable {
         case published = "Published"
         case needsReview = "Needs review"
         case hidden = "Hidden"
+
+        var userLabel: String {
+            switch self {
+            case .published:
+                return "Опубликован"
+            case .needsReview:
+                return "В обработке"
+            case .hidden:
+                return "Скрыт"
+            }
+        }
     }
 
     enum ReportReason: String, CaseIterable, Identifiable {
@@ -468,29 +479,35 @@ struct EcoPost: Identifiable, Decodable {
 
     let id: String
     let author: String
+    let username: String
     let text: String
     let state: ModerationState
     let isOwnPost: Bool
     let moderatorNote: String?
+    let moderationState: ModerationState
     let createdAt: Date
     let media: [PostMediaAttachment]
 
     init(
         id: String = UUID().uuidString,
         author: String,
+        username: String,
         text: String,
         state: ModerationState = .published,
         isOwnPost: Bool = false,
         moderatorNote: String? = nil,
+        moderationState: ModerationState = .published,
         createdAt: Date,
         media: [PostMediaAttachment]
     ) {
         self.id = id
         self.author = author
+        self.username = username
         self.text = text
         self.state = state
         self.isOwnPost = isOwnPost
         self.moderatorNote = moderatorNote
+        self.moderationState = moderationState
         self.createdAt = createdAt
         self.media = media
     }
@@ -522,6 +539,9 @@ struct EcoPost: Identifiable, Decodable {
             ?? container.decodeIfPresent(String.self, forKey: .author_name)
             ?? container.decodeIfPresent(String.self, forKey: .username)
             ?? "Пользователь"
+        username =
+            try container.decodeIfPresent(String.self, forKey: .username)
+            ?? author
         text =
             try container.decodeIfPresent(String.self, forKey: .text)
             ?? container.decodeIfPresent(String.self, forKey: .content)
@@ -539,6 +559,11 @@ struct EcoPost: Identifiable, Decodable {
         moderatorNote =
             try container.decodeIfPresent(String.self, forKey: .moderatorNote)
             ?? container.decodeIfPresent(String.self, forKey: .moderator_note)
+        moderationState =
+            try container.decodeIfPresent(ModerationState.self, forKey: .moderationState)
+            ?? container.decodeIfPresent(ModerationState.self, forKey: .moderation_state)
+            ?? ModerationState(rawValue: rawState)
+            ?? .published
         createdAt =
             try container.decodeIfPresent(Date.self, forKey: .createdAt)
             ?? container.decodeIfPresent(Date.self, forKey: .created_at)
