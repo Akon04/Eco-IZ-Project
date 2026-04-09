@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { AdminIcon } from "@/components/ui/admin-icon";
 import { getNavigation } from "@/lib/navigation";
-import brandText from "../../../text.PNG";
+import brandText from "../../../logo/text.PNG";
 
 export function Sidebar() {
   const pathname = usePathname();
