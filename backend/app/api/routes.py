@@ -429,7 +429,7 @@ def add_activity(
         post = Post(
             user_id=user.id,
             author_name=user.full_name or user.username,
-            text=f"Добавил активити: {title} ({payload.category})" + (f"\n{note}" if note else ""),
+            text=f"Добавил(а) активити: {title} ({payload.category})" + (f"\n{note}" if note else ""),
             moderation_state="Needs review",
             created_at=now,
         )

@@ -185,6 +185,12 @@ def ensure_seed_data(db: Session) -> None:
         moderator.status = "ACTIVE"
         moderator.is_email_verified = True
 
+    # Normalize legacy activity-post copy so old posts use the same neutral wording as new ones.
+    legacy_activity_prefix = "Добавил активити:"
+    normalized_activity_prefix = "Добавил(а) активити:"
+    for post in db.scalars(select(Post).where(Post.text.startswith(legacy_activity_prefix))).all():
+        post.text = post.text.replace(legacy_activity_prefix, normalized_activity_prefix, 1)
+
     challenge_specs = [
         ("7 эко-действий за неделю", "Добавь 7 экологичных активностей за последние 7 дней.", 7, 60, "leaf.fill", 0x43B244, 0xEAF8DF),
         ("3 дня без пластика", "Отметь 3 действия из категории Пластик и сократи одноразовые вещи.", 3, 40, "waterbottle.fill", 0x1AA5E6, 0xE7F5FF),
@@ -325,6 +331,10 @@ def ensure_seed_data(db: Session) -> None:
     db.flush()
 
     user_ids = [item.id for item in db.scalars(select(User)).all()]
+    for post in db.scalars(select(Post)).all():
+        if post.moderation_state == "Flagged":
+            post.moderation_state = "Needs review"
+
     for user_id in user_ids:
         db.expire_all()
         synced_user = _fetch_user_with_relations(db, user_id)

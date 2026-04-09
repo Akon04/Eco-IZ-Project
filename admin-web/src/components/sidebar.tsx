@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth-provider";
 import { AdminIcon } from "@/components/ui/admin-icon";
 import { getNavigation } from "@/lib/navigation";
+import brandText from "../../../text.PNG";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -26,9 +28,14 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <h1 className="brand">
-        ECO<span>IZ</span>
-      </h1>
+      <div className="brand" aria-label="ECOIZ">
+        <Image
+          src={brandText}
+          alt="ECOIZ"
+          className="brand-image"
+          priority
+        />
+      </div>
       <p className="sidebar-note">
         Единая админ-панель для модерации, эко-каталога и контроля данных
         платформы.

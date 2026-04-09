@@ -638,7 +638,6 @@ class BackendAPITests(unittest.TestCase):
             json={
                 "author": "Admin",
                 "content": "Пост для проверки admin CRUD",
-                "visibility": "PUBLIC",
                 "state": "Published",
                 "reportsCount": 0,
             },

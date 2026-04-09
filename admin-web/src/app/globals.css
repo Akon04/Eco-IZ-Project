@@ -73,14 +73,15 @@ textarea {
 
 .brand {
   margin: 0 0 24px;
-  font-size: 28px;
-  letter-spacing: -0.03em;
-  font-weight: 800;
-  color: var(--accent-strong);
+  display: flex;
+  align-items: center;
+  min-height: 42px;
 }
 
-.brand span {
-  color: var(--accent);
+.brand-image {
+  width: min(100%, 180px);
+  height: auto;
+  object-fit: contain;
 }
 
 .sidebar-note {

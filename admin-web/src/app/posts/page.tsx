@@ -20,7 +20,7 @@ export default async function PostsPage() {
     <>
       <PageHeader
         title="Посты"
-        description="Модерация пользовательского контента и управление видимостью постов."
+        description="Модерация пользовательского контента и публикация проверенных постов."
       />
       <PostsWorkspace initialPosts={posts} metrics={metrics} />
     </>
