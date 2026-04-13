@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { AdminIcon } from "@/components/ui/admin-icon";
 import { getNavigation } from "@/lib/navigation";
-import brandText from "../../../logo/text.PNG";
+import brandTextLogo from "../../../logo/textlogo.JPG";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -30,7 +30,7 @@ export function Sidebar() {
     <aside className="sidebar">
       <div className="brand" aria-label="ECOIZ">
         <Image
-          src={brandText}
+          src={brandTextLogo}
           alt="ECOIZ"
           className="brand-image"
           priority

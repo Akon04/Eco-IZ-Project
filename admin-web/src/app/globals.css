@@ -75,11 +75,14 @@ textarea {
   margin: 0 0 24px;
   display: flex;
   align-items: center;
-  min-height: 42px;
+  justify-content: center;
+  flex-direction: column;
+  min-height: auto;
+  text-align: center;
 }
 
 .brand-image {
-  width: min(100%, 180px);
+  width: min(100%, 150px);
   height: auto;
   object-fit: contain;
 }

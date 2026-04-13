@@ -319,13 +319,7 @@ def ensure_seed_data(db: Session) -> None:
                 Activity(user_id=user.id, category="Пластик", title="Многоразовая сумка", co2_saved=0.5, points=10, created_at=now - timedelta(hours=44)),
             ]
         )
-    if not db.scalar(select(Post).where(Post.user_id == user.id)):
-        db.add_all(
-            [
-                Post(user_id=user.id, author_name="Нурс", text="Сегодня выбрал метро вместо машины", visibility="PUBLIC", moderation_state="Published", reports_count=0, created_at=now - timedelta(hours=1)),
-                Post(user_id=user.id, author_name="Ая", text="Сортирую отходы уже 5 дней подряд", visibility="PUBLIC", moderation_state="Needs review", reports_count=2, created_at=now - timedelta(hours=3)),
-            ]
-        )
+    # Do not seed demo posts with placeholder authors.
     if not db.scalar(select(ChatMessage).where(ChatMessage.user_id == user.id)):
         db.add(ChatMessage(user_id=user.id, role="assistant", text="Привет. Я могу подсказать идеи на день, помочь с экопривычками или просто нормально ответить на вопрос.", created_at=now))
     db.flush()
